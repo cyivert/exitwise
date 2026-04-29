@@ -54,6 +54,34 @@ function normalizeContextText(text: string) {
     .trim();
 }
 
+const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
+
+async function createExperienceSessions(engagementId: string, orgId: string, retireeId: string) {
+  const sessions = [];
+
+  for (let index = 0; index < SESSION_FOCUS_SEQUENCE.length; index++) {
+    const [session] = await sql`
+      INSERT INTO interview_sessions (engagement_id, org_id, retiree_id, session_number, session_focus, status)
+      VALUES (${engagementId}, ${orgId}, ${retireeId}, ${index + 1}, ${SESSION_FOCUS_SEQUENCE[index]}, 'pending')
+      RETURNING *
+    `;
+    sessions.push(session);
+  }
+
+  return sessions;
+}
+
+async function createExperienceForRetiree(retiree: { id: string; org_id: string }) {
+  const [engagement] = await sql`
+    INSERT INTO transfer_engagements (org_id, retiree_id, status)
+    VALUES (${retiree.org_id}, ${retiree.id}, 'active')
+    RETURNING *
+  `;
+
+  const sessions = await createExperienceSessions(engagement.id, retiree.org_id, retiree.id);
+  return { engagement, sessions };
+}
+
 Bun.serve({
   port: port,
   async fetch(req) {
@@ -143,18 +171,7 @@ Bun.serve({
           if (user.role === 'retiree') {
             const [engagement] = await sql`SELECT id FROM transfer_engagements WHERE retiree_id = ${user.id}`;
             if (!engagement) {
-              const [newEng] = await sql`
-                INSERT INTO transfer_engagements (org_id, retiree_id, status)
-                VALUES (${user.org_id}, ${user.id}, 'active')
-                RETURNING id
-              `;
-              const sessionTypes = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'];
-              for (let i = 0; i < sessionTypes.length; i++) {
-                await sql`
-                  INSERT INTO interview_sessions (engagement_id, org_id, retiree_id, session_number, session_focus, status)
-                  VALUES (${newEng.id}, ${user.org_id}, ${user.id}, ${i + 1}, ${sessionTypes[i]}, ${i === 0 ? 'pending' : 'pending'})
-                `;
-              }
+              await createExperienceForRetiree({ id: user.id, org_id: user.org_id });
             }
           }
 
@@ -177,11 +194,27 @@ Bun.serve({
 
         try {
           if (decoded.role === 'retiree') {
-            const [engagement] = await sql`SELECT * FROM transfer_engagements WHERE retiree_id = ${decoded.sub}`;
-            if (!engagement) return new Response(JSON.stringify({ sessions: [] }), { headers: apiHeaders });
-            
-            const sessions = await sql`SELECT * FROM interview_sessions WHERE engagement_id = ${engagement.id} ORDER BY session_number ASC`;
-            return new Response(JSON.stringify({ engagement, sessions }), { headers: apiHeaders });
+            const [retiree] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}`;
+            if (!retiree) return new Response(JSON.stringify({ experiences: [], activeExperience: null, sessions: [] }), { headers: apiHeaders });
+
+            const experiences = await sql`
+              SELECT *
+              FROM transfer_engagements
+              WHERE retiree_id = ${decoded.sub}
+              ORDER BY created_at DESC
+            `;
+
+            const activeExperience = experiences.find((experience) => experience.status === 'active') || experiences[0] || null;
+            const sessions = activeExperience
+              ? await sql`
+                  SELECT *
+                  FROM interview_sessions
+                  WHERE engagement_id = ${activeExperience.id}
+                  ORDER BY session_number ASC
+                `
+              : [];
+
+            return new Response(JSON.stringify({ experiences, activeExperience, sessions }), { headers: apiHeaders });
           }
           
           if (decoded.role === 'successor') {
@@ -191,6 +224,54 @@ Bun.serve({
           }
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      if (url.pathname === "/api/experiences" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const [retiree] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!retiree) return new Response(JSON.stringify({ message: "Retiree not found" }), { status: 404, headers: apiHeaders });
+
+          const result = await createExperienceForRetiree(retiree);
+          return new Response(JSON.stringify(result), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      if (url.pathname.startsWith("/api/experiences/") && req.method === "DELETE") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const engagementId = url.pathname.split("/").pop();
+          if (!engagementId) {
+            return new Response(JSON.stringify({ message: "Experience not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          const [experience] = await sql`
+            SELECT *
+            FROM transfer_engagements
+            WHERE id = ${engagementId} AND retiree_id = ${decoded.sub}
+          `;
+
+          if (!experience) {
+            return new Response(JSON.stringify({ message: "Experience not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          await sql`DELETE FROM transfer_engagements WHERE id = ${engagementId}`;
+          return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
@@ -231,8 +312,12 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { release_date } = await req.json();
-          await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE retiree_id = ${decoded.sub}`;
+          const { release_date, engagement_id } = await req.json();
+          if (engagement_id) {
+            await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE id = ${engagement_id} AND retiree_id = ${decoded.sub}`;
+          } else {
+            await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE retiree_id = ${decoded.sub}`;
+          }
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });

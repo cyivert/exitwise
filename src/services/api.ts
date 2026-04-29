@@ -57,10 +57,16 @@ export const interviewService = {
 };
 
 export const dashboardService = {
-  getDashboard: () => apiFetch<{ engagement: any; sessions: any[] }>('/dashboard'),
-  updateReleaseDate: (date: string) => apiFetch<any>('/dashboard/release', {
+  getDashboard: () => apiFetch<{ experiences: any[]; activeExperience: any; sessions: any[] }>('/dashboard'),
+  createExperience: () => apiFetch<any>('/experiences', {
     method: 'POST',
-    body: JSON.stringify({ release_date: date }),
+  }),
+  deleteExperience: (experienceId: string) => apiFetch<any>(`/experiences/${experienceId}`, {
+    method: 'DELETE',
+  }),
+  updateReleaseDate: (date: string, experienceId?: string) => apiFetch<any>('/dashboard/release', {
+    method: 'POST',
+    body: JSON.stringify({ release_date: date, engagement_id: experienceId }),
   }),
 };
 
