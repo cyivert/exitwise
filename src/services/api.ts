@@ -1,4 +1,4 @@
-import { ApiResponse, LoginCredentials, SignupData, User } from '../types';
+import type { ApiResponse, LoginCredentials, SignupData, User } from '../types';
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
