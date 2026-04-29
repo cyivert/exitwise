@@ -301,6 +301,14 @@ Bun.serve({
       });
     }
 
+    // /api 404 handler - don't fall through to SPA index.html
+    if (url.pathname.startsWith("/api")) {
+      return new Response(JSON.stringify({ message: "Route not found" }), { 
+        status: 404, 
+        headers: { "Content-Type": "application/json" } 
+      });
+    }
+
     // /caveman: serve static files from dist.
     let filePath = join(DIST_PATH, url.pathname);
     if (url.pathname === "/") filePath = join(DIST_PATH, "index.html");
