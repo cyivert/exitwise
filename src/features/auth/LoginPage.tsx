@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ROUTES } from '../../config/constants';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/api';
+import { loginSchema } from '../../schemas/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,6 +17,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      setError(validation.error.issues[0].message);
+      setIsLoading(false);
+      return;
+    }
     
     const result = await authService.login({ email, password });
     

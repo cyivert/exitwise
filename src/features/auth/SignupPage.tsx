@@ -4,6 +4,7 @@ import { ROUTES } from '../../config/constants';
 import { useAuthStore } from '../../store/authStore';
 import type { UserRole } from '../../types';
 import { authService } from '../../services/api';
+import { signupSchema } from '../../schemas/auth';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,20 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    const validation = signupSchema.safeParse({
+      email,
+      password,
+      full_name: fullName,
+      role,
+      org_name: orgName || undefined
+    });
+
+    if (!validation.success) {
+      setError(validation.error.issues[0].message);
+      setIsLoading(false);
+      return;
+    }
 
     const result = await authService.signup({
       email,

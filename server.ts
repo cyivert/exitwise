@@ -2,6 +2,8 @@ import { join } from "path";
 import jwt from "jsonwebtoken";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import sql from "./src/database/db";
+import { z } from "zod";
+import { loginSchema, signupSchema } from "./src/schemas/auth";
 
 // Railway/Bun entry point. dynamic port + security.
 const port = process.env.PORT || 8080;
@@ -14,6 +16,22 @@ if (!JWT_SECRET) {
 }
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+
+// simple in-memory rate limit for auth.
+const rateLimit = new Map<string, { count: number; reset: number }>();
+function checkRateLimit(key: string) {
+  const limit = 5;
+  const window = 15 * 60 * 1000; // 15 min
+  const now = Date.now();
+  const data = rateLimit.get(key);
+  if (!data || now > data.reset) {
+    rateLimit.set(key, { count: 1, reset: now + window });
+    return false;
+  }
+  if (data.count >= limit) return true;
+  data.count++;
+  return false;
+}
 
 function verifyToken(authHeader: string | null) {
   if (!authHeader?.startsWith("Bearer ")) return null;
@@ -44,14 +62,22 @@ Bun.serve({
 
       // auth signup
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
         try {
-          const { email, password, full_name, role, org_name } = await req.json();
+          const body = await req.json();
+          const validated = signupSchema.parse(body);
+          const { email, password, full_name, role, org_name } = validated;
+
+          const ip = req.headers.get("x-forwarded-for") || "unknown";
+          if (checkRateLimit(`signup:${ip}`)) {
+            return new Response(JSON.stringify({ message: "Too many requests" }), { status: 429, headers: apiHeaders });
+          }
+
           const allowedSignupRoles = new Set(["retiree", "successor"]);
-          const requestedRole = typeof role === "string" ? role : "";
-          const userRole = allowedSignupRoles.has(requestedRole) ? requestedRole : "retiree";
+          const userRole = allowedSignupRoles.has(role) ? role : "retiree";
           let org_id;
 
-          // Public signup must not self-assign admin. Admin org creation should be a separate flow.
           if (userRole === "admin" && org_name) {
             const [org] = await sql`INSERT INTO organizations (name, industry) VALUES (${org_name}, 'other') RETURNING id`;
             org_id = org.id;
@@ -65,14 +91,25 @@ Bun.serve({
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user, token }), { headers: apiHeaders });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 400, headers: apiHeaders });
+          const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+          return new Response(JSON.stringify({ message }), { status: 400, headers: apiHeaders });
         }
       }
 
       // auth login
       if (url.pathname === "/api/auth/login" && req.method === "POST") {
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
         try {
-          const { email, password } = await req.json();
+          const body = await req.json();
+          const validated = loginSchema.parse(body);
+          const { email, password } = validated;
+
+          const ip = req.headers.get("x-forwarded-for") || "unknown";
+          if (checkRateLimit(`login:${ip}:${email}`)) {
+            return new Response(JSON.stringify({ message: "Too many attempts" }), { status: 429, headers: apiHeaders });
+          }
+
           const [user] = await sql`SELECT * FROM users WHERE email = ${email}`;
           if (!user || !(await Bun.password.verify(password, user.password_hash))) {
             return new Response(JSON.stringify({ message: "Invalid credentials" }), { status: 401, headers: apiHeaders });
@@ -81,7 +118,8 @@ Bun.serve({
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user: userSafe, token }), { headers: apiHeaders });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 400, headers: apiHeaders });
+          const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+          return new Response(JSON.stringify({ message }), { status: 400, headers: apiHeaders });
         }
       }
 
