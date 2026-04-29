@@ -6,8 +6,12 @@ import sql from "./src/database/db";
 // Railway/Bun entry point. dynamic port + security.
 const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
-const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-for-dev";
+const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
@@ -42,15 +46,20 @@ Bun.serve({
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
         try {
           const { email, password, full_name, role, org_name } = await req.json();
+          const allowedSignupRoles = new Set(["retiree", "successor"]);
+          const requestedRole = typeof role === "string" ? role : "";
+          const userRole = allowedSignupRoles.has(requestedRole) ? requestedRole : "retiree";
           let org_id;
-          if (role === 'admin' && org_name) {
+
+          // Public signup must not self-assign admin. Admin org creation should be a separate flow.
+          if (userRole === "admin" && org_name) {
             const [org] = await sql`INSERT INTO organizations (name, industry) VALUES (${org_name}, 'other') RETURNING id`;
             org_id = org.id;
           }
           const password_hash = await Bun.password.hash(password);
           const [user] = await sql`
             INSERT INTO users (org_id, email, password_hash, full_name, role) 
-            VALUES (${org_id || null}, ${email}, ${password_hash}, ${full_name}, ${role}) 
+            VALUES (${org_id || null}, ${email}, ${password_hash}, ${full_name}, ${userRole}) 
             RETURNING id, org_id, email, full_name, role, created_at
           `;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
