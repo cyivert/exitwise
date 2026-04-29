@@ -50,7 +50,12 @@ export function isMeaningfulFollowUp(text: string) {
   return /\?/.test(normalized) || normalized.split(' ').length >= 5;
 }
 
+function normalizeSessionFocus(sessionFocus: string) {
+  return sessionFocus.trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
 export function getSessionFallbackQuestion(sessionFocus: string, sessionNumber: number) {
+  const normalizedFocus = normalizeSessionFocus(sessionFocus);
   const prompts: Record<string, string> = {
     orientation: 'What was the first major turn in your career that changed how you make decisions?',
     processes: 'Walk me through the process step by step, including the checks, handoffs, and the part people usually miss.',
@@ -60,10 +65,11 @@ export function getSessionFallbackQuestion(sessionFocus: string, sessionNumber: 
     review: 'If someone had to step in tomorrow, what would you want them to know first to avoid trouble?',
   };
 
-  return `Session ${sessionNumber}.1: ${prompts[sessionFocus] || prompts.review}`;
+  return `Session ${sessionNumber}.1: ${prompts[normalizedFocus] || prompts.review}`;
 }
 
 export function getSessionFollowUpQuestions(sessionFocus: string, sessionNumber: number) {
+  const normalizedFocus = normalizeSessionFocus(sessionFocus);
   const sequences: Record<string, string[]> = {
     orientation: [
       'What was the first major turn in your career that changed how you make decisions?',
@@ -97,7 +103,7 @@ export function getSessionFollowUpQuestions(sessionFocus: string, sessionNumber:
     ],
   };
 
-  const basePrompts = sequences[sessionFocus] || sequences.review;
+  const basePrompts = sequences[normalizedFocus] || sequences.review;
   return basePrompts.map((prompt, index) => `Session ${sessionNumber}.${index + 1}: ${prompt}`);
 }
 

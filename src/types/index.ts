@@ -39,6 +39,8 @@ export interface TransferEngagement {
 export interface InterviewSession {
   id: string;
   engagement_id: string;
+  org_id?: string;
+  retiree_id?: string;
   session_number: number;
   session_focus: SessionFocus;
   status: SessionStatus;
@@ -50,6 +52,8 @@ export interface InterviewSession {
 export interface InterviewExchange {
   id: string;
   session_id: string;
+  org_id?: string;
+  retiree_id?: string;
   question_text: string;
   question_type: QuestionType;
   response_text?: string;

@@ -49,6 +49,8 @@ CREATE TABLE transfer_engagements (
 CREATE TABLE interview_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   engagement_id UUID NOT NULL REFERENCES transfer_engagements(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  retiree_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   session_number INTEGER NOT NULL,
   session_focus TEXT NOT NULL,
   status TEXT DEFAULT 'pending',
@@ -63,6 +65,8 @@ CREATE TABLE interview_sessions (
 CREATE TABLE interview_exchanges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  retiree_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
   question_type TEXT NOT NULL,
   response_text TEXT,

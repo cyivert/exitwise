@@ -42,6 +42,18 @@ function verifyToken(authHeader: string | null) {
   }
 }
 
+function normalizeContextText(text: string) {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 Bun.serve({
   port: port,
   async fetch(req) {
@@ -136,11 +148,11 @@ Bun.serve({
                 VALUES (${user.org_id}, ${user.id}, 'active')
                 RETURNING id
               `;
-              const sessionTypes = ['Orientation', 'Processes', 'Decisions', 'Relationships', 'Edge Cases', 'Review'];
+              const sessionTypes = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'];
               for (let i = 0; i < sessionTypes.length; i++) {
                 await sql`
-                  INSERT INTO interview_sessions (engagement_id, session_number, session_focus, status)
-                  VALUES (${newEng.id}, ${i + 1}, ${sessionTypes[i]}, ${i === 0 ? 'pending' : 'pending'})
+                  INSERT INTO interview_sessions (engagement_id, org_id, retiree_id, session_number, session_focus, status)
+                  VALUES (${newEng.id}, ${user.org_id}, ${user.id}, ${i + 1}, ${sessionTypes[i]}, ${i === 0 ? 'pending' : 'pending'})
                 `;
               }
             }
@@ -270,19 +282,50 @@ Bun.serve({
 
         try {
           const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
+          const [session] = await sql`
+            SELECT s.id, s.running_summary, e.org_id, e.retiree_id
+            FROM interview_sessions s
+            JOIN transfer_engagements e ON e.id = s.engagement_id
+            WHERE s.id = ${session_id}
+          `;
+
+          if (!session) {
+            return new Response(JSON.stringify({ message: "Session not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          const shouldAppendSummary = Boolean(response_text) && !ai_follow_up;
+          const summaryEntry = shouldAppendSummary
+            ? {
+                question_text,
+                response_text,
+                sequence_order: sequence_order ?? 0,
+                created_at: new Date().toISOString(),
+              }
+            : null;
+
           await sql`
-            INSERT INTO interview_exchanges (id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order)
-            VALUES (${id}, ${session_id}, ${question_text}, ${question_type}, ${response_text}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
+            INSERT INTO interview_exchanges (id, session_id, org_id, retiree_id, question_text, question_type, response_text, ai_follow_up, sequence_order)
+            VALUES (${id}, ${session_id}, ${session.org_id}, ${session.retiree_id}, ${question_text}, ${question_type}, ${response_text}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
             ON CONFLICT (id) DO UPDATE SET
               session_id = EXCLUDED.session_id,
+              org_id = EXCLUDED.org_id,
+              retiree_id = EXCLUDED.retiree_id,
               question_text = EXCLUDED.question_text,
               question_type = EXCLUDED.question_type,
               response_text = EXCLUDED.response_text,
               ai_follow_up = COALESCE(EXCLUDED.ai_follow_up, interview_exchanges.ai_follow_up),
               sequence_order = EXCLUDED.sequence_order
           `;
-          // update session status to active
-          await sql`UPDATE interview_sessions SET status = 'active' WHERE id = ${session_id}`;
+          if (summaryEntry) {
+            await sql`
+              UPDATE interview_sessions
+              SET running_summary = COALESCE(running_summary, '[]'::jsonb) || ${JSON.stringify([summaryEntry])}::jsonb,
+                  status = 'active'
+              WHERE id = ${session_id}
+            `;
+          } else {
+            await sql`UPDATE interview_sessions SET status = 'active' WHERE id = ${session_id}`;
+          }
           
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
         } catch (e: any) {
@@ -301,17 +344,42 @@ Bun.serve({
           const { sessionId, userResponse } = await req.json();
           
           // fetch context from DB.
-          const [session] = await sql`SELECT * FROM interview_sessions WHERE id = ${sessionId}`;
-          const [retiree] = await sql`SELECT * FROM users WHERE id = ${decoded.sub}`;
+          const [session] = await sql`
+            SELECT s.*, e.org_id, e.retiree_id, u.full_name AS retiree_name, u.job_title, u.years_exp, o.name AS org_name
+            FROM interview_sessions s
+            JOIN transfer_engagements e ON e.id = s.engagement_id
+            JOIN users u ON u.id = e.retiree_id
+            JOIN organizations o ON o.id = e.org_id
+            WHERE s.id = ${sessionId}
+          `;
+
+          const recentExchanges = await sql`
+            SELECT question_text, response_text, ai_follow_up, sequence_order, created_at
+            FROM interview_exchanges
+            WHERE session_id = ${sessionId}
+            ORDER BY created_at ASC
+            LIMIT 6
+          `;
 
           if (!session) return new Response("Session not found", { status: 404 });
 
+          const exchangeContext = recentExchanges
+            .map((exchange, index) => {
+              const response = exchange.response_text ? normalizeContextText(exchange.response_text) : 'No response saved yet.';
+              const followUp = exchange.ai_follow_up ? normalizeContextText(exchange.ai_follow_up) : 'No follow-up saved yet.';
+              return `${index + 1}. Q: ${normalizeContextText(exchange.question_text)}\n   A: ${response}\n   Follow-up: ${followUp}`;
+            })
+            .join('\n');
+
           const prompt = `
             You are ExitWise AI. You interview retiring employees to extract tacit knowledge.
-            Retiree: ${retiree.full_name}, ${retiree.job_title || 'Expert'}, ${retiree.years_exp || 20} years exp.
+            Retiree: ${session.retiree_name}, ${session.job_title || 'Expert'}, ${session.years_exp || 20} years exp.
+            Organization: ${session.org_name}.
             Session: ${session.session_number} - Focus: ${session.session_focus}.
+            Preserve the concrete knowledge the retiree is trying to hand off to the next hires.
             
             History Summary: ${JSON.stringify(session.running_summary)}
+            Recent Exchanges:\n${exchangeContext || 'No exchanges saved yet.'}
             
             SIGNALS TO PROBE:
             1. Vague qualifiers ("you just know", "it depends") -> Ask for concrete example.
