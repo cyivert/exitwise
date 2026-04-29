@@ -19,6 +19,7 @@ export const signupSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   role: z.enum(['retiree', 'successor']),
   org_name: z.string().optional(),
+  invite_code: z.string().length(8, 'Invite code must be 8 characters').optional().or(z.literal('')),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

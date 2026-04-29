@@ -92,4 +92,5 @@ export interface SignupData {
   full_name: string;
   role: UserRole;
   org_name?: string;
+  invite_code?: string;
 }

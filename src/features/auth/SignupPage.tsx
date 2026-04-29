@@ -12,6 +12,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>('retiree');
   const [orgName, setOrgName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +29,8 @@ export default function SignupPage() {
       password,
       full_name: fullName,
       role,
-      org_name: orgName || undefined
+      org_name: orgName || undefined,
+      invite_code: inviteCode || undefined
     });
 
     if (!validation.success) {
@@ -42,7 +44,8 @@ export default function SignupPage() {
       password,
       full_name: fullName,
       role,
-      org_name: orgName
+      org_name: orgName,
+      invite_code: inviteCode
     });
 
     if (result.data) {
@@ -94,18 +97,33 @@ export default function SignupPage() {
               {/* <option value="admin">Admin / HR Manager</option> */}
             </select>
           </div>
-          {role === 'admin' && (
+          <div>
+            <label className="label-caps block mb-2">Invite Code (Optional)</label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="8-character code"
+              className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid"
+            />
+            <p className="mt-1 text-xs text-text-light">Joining an existing organization? Enter code here.</p>
+          </div>
+
+          {!inviteCode && (
             <div>
-              <label className="label-caps block mb-2">Organization Name</label>
+              <label className="label-caps block mb-2">New Organization Name</label>
               <input
                 type="text"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
+                placeholder="e.g. Acme Corp"
                 className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid"
-                required
+                required={!inviteCode}
               />
+              <p className="mt-1 text-xs text-text-light">Create a new workspace for your knowledge transfer.</p>
             </div>
           )}
+
           <div>
             <label className="label-caps block mb-2">Password</label>
             <input

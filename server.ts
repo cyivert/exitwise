@@ -67,25 +67,37 @@ Bun.serve({
         try {
           const body = await req.json();
           const validated = signupSchema.parse(body);
-          const { email, password, full_name, role, org_name } = validated;
+          const { email, password, full_name, role, org_name, invite_code } = validated;
 
           const ip = req.headers.get("x-forwarded-for") || "unknown";
           if (checkRateLimit(`signup:${ip}`)) {
             return new Response(JSON.stringify({ message: "Too many requests" }), { status: 429, headers: apiHeaders });
           }
 
-          const allowedSignupRoles = new Set(["retiree", "successor"]);
-          const userRole = allowedSignupRoles.has(role) ? role : "retiree";
           let org_id;
 
-          if (userRole === "admin" && org_name) {
-            const [org] = await sql`INSERT INTO organizations (name, industry) VALUES (${org_name}, 'other') RETURNING id`;
+          if (invite_code) {
+            const [org] = await sql`SELECT id FROM organizations WHERE invite_code = ${invite_code}`;
+            if (!org) {
+              return new Response(JSON.stringify({ message: "Invalid invite code" }), { status: 400, headers: apiHeaders });
+            }
             org_id = org.id;
+          } else if (org_name) {
+            // New org creation (hackathon shortcut: first user is admin/retiree)
+            const [org] = await sql`
+              INSERT INTO organizations (name, industry, invite_code) 
+              VALUES (${org_name}, 'other', substring(gen_random_uuid()::text, 1, 8)) 
+              RETURNING id
+            `;
+            org_id = org.id;
+          } else {
+            return new Response(JSON.stringify({ message: "Organization name or invite code required" }), { status: 400, headers: apiHeaders });
           }
+
           const password_hash = await Bun.password.hash(password);
           const [user] = await sql`
             INSERT INTO users (org_id, email, password_hash, full_name, role) 
-            VALUES (${org_id || null}, ${email}, ${password_hash}, ${full_name}, ${userRole}) 
+            VALUES (${org_id}, ${email}, ${password_hash}, ${full_name}, ${role}) 
             RETURNING id, org_id, email, full_name, role, created_at
           `;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });

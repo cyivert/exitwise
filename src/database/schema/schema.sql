@@ -84,3 +84,15 @@ CREATE TABLE knowledge_profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ --Create column:
+ALTER TABLE organizations ADD COLUMN invite_code TEXT;
+
+--Verify it exist:
+SELECT column_name FROM information_schema.columns WHERE table_name = 'organizations';
+
+--If exist, add constraint and data:
+ALTER TABLE organizations ADD CONSTRAINT organizations_invite_code_key UNIQUE (invite_code);
+UPDATE organizations
+SET invite_code = substring(gen_random_uuid()::text, 1, 8)
+WHERE invite_code IS NULL;
