@@ -12,6 +12,7 @@ interface InterviewState {
   currentQuestionType: string;
   draftResponse: string;
   questionHistory: Array<{ question: string; type: string }>;
+  responseHistory: string[];
   currentQuestionIndex: number;
 }
 
@@ -22,6 +23,7 @@ interface InterviewActions {
   setIsStreaming: (isStreaming: boolean) => void;
   setCurrentQuestion: (question: string, type: string) => void;
   pushQuestionHistory: (question: string, type: string) => void;
+  pushResponseHistory: (response: string) => void;
   clearQuestionHistory: () => void;
   goBackQuestion: () => void;
   setCurrentQuestionIndex: (index: number) => void;
@@ -41,6 +43,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
       currentQuestionType: 'anchor',
       draftResponse: '',
       questionHistory: [],
+      responseHistory: [],
       currentQuestionIndex: 0,
       setSession: (id, focus) => set({ sessionId: id, sessionFocus: focus }),
       addExchange: (exchange) => set((state) => ({ exchanges: [...state.exchanges, exchange] })),
@@ -52,6 +55,10 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         set((state) => ({
           questionHistory: [...state.questionHistory, { question, type }].slice(-8),
         })),
+      pushResponseHistory: (response) =>
+        set((state) => ({
+          responseHistory: [...state.responseHistory, response].slice(-8),
+        })),
       clearQuestionHistory: () => set({ questionHistory: [], currentQuestionIndex: 0 }),
       goBackQuestion: () =>
         set((state) => {
@@ -59,15 +66,19 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
 
           const nextHistory = [...state.questionHistory];
           const previous = nextHistory.pop();
+          const nextResponseHistory = [...state.responseHistory];
+          const previousResponse = nextResponseHistory.pop();
 
           if (!previous) return state;
 
           return {
             currentQuestion: previous.question,
             currentQuestionType: previous.type,
+            draftResponse: previousResponse ?? '',
             streamingText: '',
             isStreaming: false,
             questionHistory: nextHistory,
+            responseHistory: nextResponseHistory,
             currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1),
           };
         }),
@@ -82,6 +93,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestionType: 'anchor',
         draftResponse: '',
         questionHistory: [],
+        responseHistory: [],
         currentQuestionIndex: 0,
       }),
     }),
@@ -96,6 +108,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestionType: state.currentQuestionType,
         draftResponse: state.draftResponse,
         questionHistory: state.questionHistory,
+        responseHistory: state.responseHistory,
         currentQuestionIndex: state.currentQuestionIndex,
       }),
     }

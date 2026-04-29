@@ -26,6 +26,7 @@ export default function InterviewPage() {
     draftResponse,
     setDraftResponse,
     pushQuestionHistory,
+    pushResponseHistory,
     clearQuestionHistory,
     goBackQuestion,
     questionHistory,
@@ -70,15 +71,16 @@ export default function InterviewPage() {
       }
 
       const latestStoreState = useInterviewStore.getState();
-      const hasStoredQuestionForSession = latestStoreState.sessionId === session.id && Boolean(latestStoreState.currentQuestion);
+      const storedQuestionIsUsable = latestStoreState.sessionId === session.id && isMeaningfulFollowUp(latestStoreState.currentQuestion);
       const latestQuestion = session.latest_exchange?.ai_follow_up || session.latest_exchange?.question_text || '';
 
-      if (!hasStoredQuestionForSession) {
-        const anchorQuestion = getQuestionProgression(session.session_focus, session.session_number, 0);
+      if (!storedQuestionIsUsable) {
+        const storedQuestionIndex = latestStoreState.currentQuestionIndex || 0;
+        const anchorQuestion = getQuestionProgression(session.session_focus, session.session_number, storedQuestionIndex);
         const normalizedLatestQuestion = normalizeInterviewText(latestQuestion);
         const nextQuestion = isMeaningfulFollowUp(normalizedLatestQuestion) ? normalizedLatestQuestion : anchorQuestion;
         setCurrentQuestion(nextQuestion, latestQuestion ? 'probe' : 'anchor');
-        setCurrentQuestionIndex(0);
+        setCurrentQuestionIndex(storedQuestionIndex);
         setDraftResponse('');
         setStreamingText('');
       }
@@ -118,6 +120,7 @@ export default function InterviewPage() {
     // save to DB.
     await interviewService.saveExchange(exchange);
     addExchange(exchange);
+    pushResponseHistory(draftResponse);
 
     setIsStreaming(true);
     setStreamingText('');
@@ -241,7 +244,6 @@ export default function InterviewPage() {
                 <button
                   onClick={() => {
                     goBackQuestion();
-                    setDraftResponse('');
                     setStreamingText('');
                   }}
                   disabled={questionHistory.length === 0 || isStreaming}

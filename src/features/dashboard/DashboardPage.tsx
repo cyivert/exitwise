@@ -27,6 +27,9 @@ export default function DashboardPage() {
     }
   };
 
+  const nextSession = data?.sessions.find(s => s.status !== 'complete') || data?.sessions[0];
+  const startButtonLabel = nextSession?.status === 'pending' && nextSession?.session_number === 1 ? 'Start' : 'Continue Next Session';
+
   if (!isAuthenticated || !user) {
     return <Navigate to={ROUTES.LOGIN} />;
   }
@@ -81,10 +84,11 @@ export default function DashboardPage() {
                   <div className="p-6 border-b border-cream-dark flex justify-between items-center">
                     <h3 className="text-xl font-serif">Your Knowledge Sessions</h3>
                     <button 
-                      onClick={() => navigate(`/interview/${data?.sessions.find(s => s.status !== 'complete')?.id}`)}
+                      onClick={() => navigate(`/interview/${nextSession?.id}`)}
                       className="btn-primary"
+                      disabled={!nextSession?.id}
                     >
-                      Continue Next Session
+                      {startButtonLabel}
                     </button>
                   </div>
                   <div className="p-6 space-y-4">
