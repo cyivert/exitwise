@@ -91,10 +91,9 @@ export default function SignupPage() {
               onChange={(e) => setRole(e.target.value as UserRole)}
               className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid"
             >
+              <option value="organization_admin">Organization Admin</option>
               <option value="retiree">Retiree</option>
               <option value="successor">Successor</option>
-              {/* backend verify admin role. don't allow public choice. */}
-              {/* <option value="admin">Admin / HR Manager</option> */}
             </select>
           </div>
           <div>

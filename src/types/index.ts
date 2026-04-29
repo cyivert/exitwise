@@ -1,5 +1,5 @@
 export const VERSION = '0.1.0';
-export type UserRole = 'admin' | 'retiree' | 'successor';
+export type UserRole = 'admin' | 'organization_admin' | 'retiree' | 'successor';
 export type EngagementStatus = 'pending' | 'active' | 'complete';
 export type SessionStatus = 'pending' | 'active' | 'complete';
 export type QuestionType = 'anchor' | 'probe' | 'scenario' | 'contrast' | 'legacy' | 'gap_fill';

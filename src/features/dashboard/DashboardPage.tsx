@@ -7,11 +7,12 @@ import { dashboardService, interviewService } from '../../services/api';
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const [data, setData] = useState<{ experiences?: any[]; activeExperience?: any; sessions?: any[]; engagement?: any } | null>(null);
+  const [data, setData] = useState<{ experiences?: any[]; activeExperience?: any; sessions?: any[]; engagement?: any; organization?: any; members?: any[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedExperienceId, setSelectedExperienceId] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<any[]>([]);
+  const [memberForm, setMemberForm] = useState({ full_name: '', email: '', password: '', role: 'retiree', job_title: '', years_exp: '' });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -68,6 +69,38 @@ export default function DashboardPage() {
 
   const nextSession = selectedSessions.find((s) => s.status !== 'complete') || selectedSessions[0];
   const startButtonLabel = nextSession?.status === 'pending' && nextSession?.session_number === 1 ? 'Start' : 'Continue Next Session';
+
+  const isOrganizationAdmin = user?.role === 'organization_admin' || user?.role === 'admin';
+
+  const handleCreateMember = async () => {
+    if (!memberForm.full_name || !memberForm.email || !memberForm.password) return;
+
+    setIsBusy(true);
+    const res = await dashboardService.createOrgMember({
+      full_name: memberForm.full_name,
+      email: memberForm.email,
+      password: memberForm.password,
+      role: memberForm.role,
+      job_title: memberForm.job_title || undefined,
+      years_exp: memberForm.years_exp ? Number(memberForm.years_exp) : undefined,
+    });
+
+    if (res.data?.user) {
+      setData((prev) => prev ? { ...prev, members: [res.data.user, ...(prev.members || [])] } : prev);
+      setMemberForm({ full_name: '', email: '', password: '', role: 'retiree', job_title: '', years_exp: '' });
+    }
+
+    setIsBusy(false);
+  };
+
+  const handleDeleteMember = async (memberId: string) => {
+    setIsBusy(true);
+    const res = await dashboardService.deleteOrgMember(memberId);
+    if (res.data) {
+      setData((prev) => prev ? { ...prev, members: (prev.members || []).filter((member: any) => member.id !== memberId) } : prev);
+    }
+    setIsBusy(false);
+  };
 
   const handleAddExperience = async () => {
     setIsBusy(true);
@@ -141,19 +174,81 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {user.role === 'admin' && (
+            {isOrganizationAdmin && (
               <div className="grid md:grid-cols-4 gap-6 mb-12">
-                {[
-                  { label: 'Active Transfers', value: '12' },
-                  { label: 'Completed', value: '45' },
-                  { label: 'Retiring in 90d', value: '3' },
-                  { label: 'Avg Completion', value: '92%' },
-                ].map((stat, i) => (
-                  <div key={i} className="bg-white p-6 rounded-lg border border-cream-dark shadow-sm">
-                    <p className="label-caps mb-2">{stat.label}</p>
-                    <p className="text-3xl font-serif text-text-dark">{stat.value}</p>
+                <div className="md:col-span-4 bg-white p-6 rounded-lg border border-cream-dark shadow-sm flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="label-caps mb-2">Organization Admin</p>
+                    <h3 className="text-2xl font-serif">{data?.organization?.name || 'Organization'}</h3>
+                    <p className="text-text-light">Manage retirees, successors, and admin users in this organization.</p>
                   </div>
-                ))}
+                  <div className="text-sm text-text-light">
+                    {data?.members?.length || 0} members • {data?.experiences?.length || 0} experiences
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isOrganizationAdmin && (
+              <div className="space-y-8 mb-12">
+                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-cream-dark flex justify-between items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-serif">Organization Members</h3>
+                      <p className="text-sm text-text-light">Create or remove users for this organization.</p>
+                    </div>
+                  </div>
+                  <div className="p-6 grid md:grid-cols-2 gap-6 border-b border-cream-dark">
+                    <input value={memberForm.full_name} onChange={(e) => setMemberForm((prev) => ({ ...prev, full_name: e.target.value }))} placeholder="Full name" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                    <input value={memberForm.email} onChange={(e) => setMemberForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Email" type="email" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                    <input value={memberForm.password} onChange={(e) => setMemberForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Temporary password" type="password" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                    <select value={memberForm.role} onChange={(e) => setMemberForm((prev) => ({ ...prev, role: e.target.value }))} className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid">
+                      <option value="retiree">Retiree</option>
+                      <option value="successor">Successor</option>
+                      <option value="organization_admin">Organization Admin</option>
+                    </select>
+                    <input value={memberForm.job_title} onChange={(e) => setMemberForm((prev) => ({ ...prev, job_title: e.target.value }))} placeholder="Job title (optional)" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                    <input value={memberForm.years_exp} onChange={(e) => setMemberForm((prev) => ({ ...prev, years_exp: e.target.value }))} placeholder="Years experience (optional)" type="number" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                  </div>
+                  <div className="p-6 flex justify-end">
+                    <button onClick={handleCreateMember} className="btn-primary" disabled={isBusy}>Add Member</button>
+                  </div>
+                  <div className="p-6 space-y-3">
+                    {(data?.members || []).map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
+                        <div>
+                          <p className="font-medium">{member.full_name}</p>
+                          <p className="text-xs uppercase tracking-widest text-text-light">{member.role} • {member.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteMember(member.id)}
+                          className="text-xs px-3 py-2 rounded border border-red-200 text-red-700 hover:bg-red-50"
+                          disabled={isBusy || member.id === user.id}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-cream-dark">
+                    <h3 className="text-xl font-serif">Organization Experiences</h3>
+                    <p className="text-sm text-text-light">Retiree knowledge sessions across the organization.</p>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    {(data?.experiences || []).map((experience) => (
+                      <div key={experience.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
+                        <div>
+                          <p className="font-medium">{experience.retiree_name || 'Retiree'} • {experience.session_focus}</p>
+                          <p className="text-xs uppercase tracking-widest text-text-light">Session {experience.session_number} • {experience.status}</p>
+                        </div>
+                        <span className="text-xs uppercase tracking-widest text-text-light font-bold">{experience.release_date ? 'Released' : 'Private'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

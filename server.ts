@@ -82,6 +82,29 @@ async function createExperienceForRetiree(retiree: { id: string; org_id: string 
   return { engagement, sessions };
 }
 
+async function getOrganizationAdminContext(userId: string) {
+  const [adminUser] = await sql`SELECT id, org_id FROM users WHERE id = ${userId}` as Array<{ id: string; org_id: string }>;
+  if (!adminUser) return null;
+
+  const [organization] = await sql`SELECT * FROM organizations WHERE id = ${adminUser.org_id}`;
+  const members = await sql`
+    SELECT id, org_id, email, full_name, role, job_title, years_exp, created_at
+    FROM users
+    WHERE org_id = ${adminUser.org_id}
+    ORDER BY created_at DESC
+  `;
+
+  const experiences = await sql`
+    SELECT e.*, u.full_name AS retiree_name, u.email AS retiree_email, u.job_title AS retiree_job_title
+    FROM transfer_engagements e
+    JOIN users u ON u.id = e.retiree_id
+    WHERE e.org_id = ${adminUser.org_id}
+    ORDER BY e.created_at DESC
+  `;
+
+  return { organization, members, experiences };
+}
+
 Bun.serve({
   port: port,
   async fetch(req) {
@@ -107,7 +130,7 @@ Bun.serve({
         try {
           const body = await req.json();
           const validated = signupSchema.parse(body);
-          const { email, password, full_name, role, org_name, invite_code } = validated;
+          let { email, password, full_name, role, org_name, invite_code } = validated;
 
           const ip = req.headers.get("x-forwarded-for") || "unknown";
           if (checkRateLimit(`signup:${ip}`)) {
@@ -123,13 +146,14 @@ Bun.serve({
             }
             org_id = org.id;
           } else if (org_name) {
-            // New org creation (hackathon shortcut: first user is admin/retiree)
+            // New org creation: first user becomes the organization admin.
             const [org] = await sql`
               INSERT INTO organizations (name, industry, invite_code) 
               VALUES (${org_name}, 'other', substring(gen_random_uuid()::text, 1, 8)) 
               RETURNING id
             `;
             org_id = org.id;
+            role = 'organization_admin';
           } else {
             return new Response(JSON.stringify({ message: "Organization name or invite code required" }), { status: 400, headers: apiHeaders });
           }
@@ -216,6 +240,13 @@ Bun.serve({
 
             return new Response(JSON.stringify({ experiences, activeExperience, sessions }), { headers: apiHeaders });
           }
+
+          if (decoded.role === 'organization_admin' || decoded.role === 'admin') {
+            const adminContext = await getOrganizationAdminContext(decoded.sub);
+            if (!adminContext) return new Response(JSON.stringify({ organization: null, members: [], experiences: [] }), { headers: apiHeaders });
+
+            return new Response(JSON.stringify(adminContext), { headers: apiHeaders });
+          }
           
           if (decoded.role === 'successor') {
             const [engagement] = await sql`SELECT * FROM transfer_engagements WHERE successor_id = ${decoded.sub} OR org_id IN (SELECT org_id FROM users WHERE id = ${decoded.sub})`;
@@ -224,6 +255,76 @@ Bun.serve({
           }
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      if (url.pathname === "/api/org/members" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || (decoded.role !== 'organization_admin' && decoded.role !== 'admin')) return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const body = await req.json();
+          const { full_name, email, password, role, job_title, years_exp } = body;
+          const [adminUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!adminUser) return new Response(JSON.stringify({ message: "Organization admin not found" }), { status: 404, headers: apiHeaders });
+
+          const password_hash = await Bun.password.hash(password);
+          const [user] = await sql`
+            INSERT INTO users (org_id, email, password_hash, full_name, role, job_title, years_exp)
+            VALUES (${adminUser.org_id}, ${email}, ${password_hash}, ${full_name}, ${role}, ${job_title ?? null}, ${years_exp ?? null})
+            RETURNING id, org_id, email, full_name, role, job_title, years_exp, created_at
+          `;
+
+          return new Response(JSON.stringify({ user }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      if (url.pathname.startsWith("/api/org/members/") && req.method === "DELETE") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || (decoded.role !== 'organization_admin' && decoded.role !== 'admin')) return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const memberId = url.pathname.split("/").pop();
+          if (!memberId || memberId === decoded.sub) {
+            return new Response(JSON.stringify({ message: "Member not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          const [adminUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!adminUser) return new Response(JSON.stringify({ message: "Organization admin not found" }), { status: 404, headers: apiHeaders });
+
+          const [member] = await sql`
+            SELECT * FROM users
+            WHERE id = ${memberId} AND org_id = ${adminUser.org_id}
+          `;
+
+          if (!member) {
+            return new Response(JSON.stringify({ message: "Member not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          if (member.role === 'organization_admin' || member.role === 'admin') {
+            return new Response(JSON.stringify({ message: "Organization admins cannot be deleted from the dashboard" }), { status: 400, headers: apiHeaders });
+          }
+
+          if (member.role === 'retiree') {
+            await sql`DELETE FROM transfer_engagements WHERE retiree_id = ${memberId}`;
+          }
+
+          if (member.role === 'successor') {
+            await sql`UPDATE transfer_engagements SET successor_id = NULL WHERE successor_id = ${memberId}`;
+          }
+
+          await sql`DELETE FROM users WHERE id = ${memberId}`;
+          return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
