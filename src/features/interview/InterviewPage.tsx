@@ -5,6 +5,8 @@ import { useAuthStore } from '../../store/authStore';
 import { streamInterviewResponse } from '../../services/gemini';
 import { interviewService } from '../../services/api';
 import { ROUTES } from '../../config/constants';
+import type { QuestionType } from '../../types';
+import { normalizeInterviewText, getInitials } from '../../utils/helpers';
 
 export default function InterviewPage() {
   const { sessionId } = useParams();
@@ -12,6 +14,7 @@ export default function InterviewPage() {
   const { user } = useAuthStore();
   const { 
     currentQuestion, 
+    currentQuestionType,
     setCurrentQuestion, 
     streamingText, 
     setStreamingText, 
@@ -19,39 +22,81 @@ export default function InterviewPage() {
     setIsStreaming,
     addExchange,
     setSession,
-    sessionFocus
+    sessionFocus,
+    draftResponse,
+    setDraftResponse,
   } = useInterviewStore();
 
-  const [response, setResponse] = useState('');
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // init session from DB.
   useEffect(() => {
-    if (sessionId) {
-      interviewService.getSession(sessionId).then(res => {
-        if (res.data) {
-          setSession(res.data.id, res.data.session_focus);
-          // if first time, start with anchor.
-          if (!currentQuestion) {
-            setCurrentQuestion(`Welcome to Session ${res.data.session_number}. Let's focus on ${res.data.session_focus}. To start, describe a complex situation you handled recently where your experience was the deciding factor.`, "anchor");
-          }
-        }
+    let cancelled = false;
+
+    async function loadSession() {
+      if (!sessionId) return;
+
+      setIsLoading(true);
+
+      const sessionRes = await interviewService.getSession(sessionId);
+      const session = sessionRes.data;
+
+      if (!session || cancelled) {
         setIsLoading(false);
-      });
+        return;
+      }
+
+      setSessionData(session);
+      setSession(session.id, session.session_focus);
+
+      const sessionsRes = await interviewService.getSessions(session.engagement_id);
+      if (!cancelled && sessionsRes.data) {
+        setSessions(sessionsRes.data);
+      }
+
+      const storeState = useInterviewStore.getState();
+      const hasStoredQuestionForSession = storeState.sessionId === session.id && Boolean(storeState.currentQuestion);
+      const latestQuestion = session.latest_exchange?.ai_follow_up || session.latest_exchange?.question_text || '';
+
+      if (!hasStoredQuestionForSession) {
+        const anchorQuestion = `Welcome to Session ${session.session_number}. Let's focus on ${session.session_focus}. To start, describe a complex situation you handled recently where your experience was the deciding factor.`;
+        const nextQuestion = latestQuestion ? normalizeInterviewText(latestQuestion) : anchorQuestion;
+        setCurrentQuestion(nextQuestion, latestQuestion ? 'probe' : 'anchor');
+        setDraftResponse('');
+        setStreamingText('');
+      }
+
+      setIsLoading(false);
     }
-  }, [sessionId]);
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
+
+  const currentSessionNumber = sessionData?.session_number ?? null;
+  const totalSessions = sessions.length || 6;
+  const remainingSessions = currentSessionNumber
+    ? sessions.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
+    : 0;
+  const displayedQuestion = normalizeInterviewText(currentQuestion);
+  const displayedFollowUp = normalizeInterviewText(streamingText);
 
   const handleContinue = async () => {
-    if (!response || isStreaming) return;
+    if (!draftResponse || isStreaming || !sessionData) return;
 
     const exchange = {
       id: crypto.randomUUID(),
       session_id: sessionId!,
       question_text: currentQuestion,
-      question_type: 'anchor' as any,
-      response_text: response,
+      question_type: currentQuestionType as QuestionType,
+      response_text: draftResponse,
       created_at: new Date().toISOString(),
-      sequence_order: 0
+      sequence_order: sessionData.session_number,
     };
 
     // save to DB.
@@ -63,13 +108,19 @@ export default function InterviewPage() {
 
     try {
       let fullResponse = '';
-      for await (const chunk of streamInterviewResponse(sessionId!, response)) {
+      for await (const chunk of streamInterviewResponse(sessionId!, draftResponse)) {
         fullResponse += chunk;
         setStreamingText(fullResponse);
       }
       
-      setCurrentQuestion(fullResponse, "probe");
-      setResponse('');
+      const cleanedFollowUp = normalizeInterviewText(fullResponse);
+      await interviewService.saveExchange({
+        ...exchange,
+        ai_follow_up: cleanedFollowUp,
+      });
+      setCurrentQuestion(cleanedFollowUp, "probe");
+      setStreamingText(cleanedFollowUp);
+      setDraftResponse('');
     } catch (error) {
       console.error(error);
     } finally {
@@ -82,27 +133,44 @@ export default function InterviewPage() {
   return (
     <div className="min-h-screen bg-cream flex">
       {/* Sidebar */}
-      <aside className="w-[240px] bg-white border-r border-cream-dark p-6 hidden md:block">
+      <aside className="w-60 bg-white border-r border-cream-dark p-6 hidden md:block">
         <div className="mb-8">
           <div className="w-12 h-12 rounded-full bg-green-deep flex items-center justify-center text-white mb-4">
-            {user?.full_name[0]}
+            {getInitials(user?.full_name || 'Retiree')}
           </div>
           <h4 className="font-serif text-lg">{user?.full_name}</h4>
           <p className="text-xs text-text-light uppercase tracking-tighter">{user?.job_title || 'Expert Retiree'}</p>
         </div>
 
+        <div className="mb-8 rounded-lg border border-cream-dark bg-cream/40 p-4">
+          <p className="label-caps text-amber mb-1">Session Progress</p>
+          <p className="font-serif text-lg text-text-dark">
+            Session {currentSessionNumber ?? '?'} of {totalSessions}
+          </p>
+          <p className="text-xs text-text-light mt-1">
+            {remainingSessions} more {remainingSessions === 1 ? 'session' : 'sessions'} after this one.
+          </p>
+        </div>
+
         <nav className="space-y-4">
-          {[1, 2, 3, 4, 5, 6].map(num => (
-            <div key={num} className="flex items-center space-x-3">
-              <div className={`w-2 h-2 rounded-full ${num < 3 ? 'bg-green-light' : num === 3 ? 'bg-amber' : 'bg-cream-dark'}`} />
-              <span className="text-sm">Session {num}</span>
-            </div>
-          ))}
+          {sessions.map((session) => {
+            const isCurrentSession = session.id === sessionId;
+            const isComplete = session.status === 'complete';
+
+            return (
+              <div key={session.id} className="flex items-center space-x-3">
+                <div className={`w-2 h-2 rounded-full ${isComplete ? 'bg-green-light' : isCurrentSession ? 'bg-amber' : 'bg-cream-dark'}`} />
+                <span className={`text-sm ${isCurrentSession ? 'font-medium text-text-dark' : 'text-text-mid'}`}>
+                  Session {session.session_number}: {session.session_focus}
+                </span>
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
       {/* Main Area */}
-      <div className="flex-grow flex flex-col">
+      <div className="grow flex flex-col">
         <header className="p-6 flex justify-between items-center border-b border-cream-dark">
           <div className="flex items-center space-x-4">
             <button 
@@ -119,18 +187,18 @@ export default function InterviewPage() {
           <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
         </header>
 
-        <main className="flex-grow p-12 max-w-3xl mx-auto w-full">
+        <main className="grow p-12 max-w-3xl mx-auto w-full">
           <div className="mb-12">
             <span className="label-caps text-amber block mb-4">Current Focus</span>
             <h2 className="text-4xl leading-tight mb-6 font-serif">
-              {currentQuestion}
+              {displayedQuestion}
             </h2>
           </div>
 
           <div className="space-y-6">
             <textarea
-              value={response}
-              onChange={(e) => setResponse(e.target.value)}
+              value={draftResponse}
+              onChange={(e) => setDraftResponse(e.target.value)}
               placeholder="Take your time. We are capturing how you think, not just what you do."
               className="w-full h-48 p-6 bg-white border border-cream-dark rounded-lg focus:ring-1 focus:ring-green-mid outline-none resize-none text-lg shadow-inner font-serif"
               disabled={isStreaming}
@@ -157,7 +225,7 @@ export default function InterviewPage() {
             <div className="mt-12 p-8 bg-green-pale/30 border border-green-pale rounded-lg animate-in fade-in slide-in-from-bottom-4">
                <span className="label-caps text-green-mid block mb-4">ExitWise Follow-up</span>
                <p className="text-xl font-serif italic text-text-dark leading-relaxed">
-                 {streamingText}
+                 {displayedFollowUp}
                  {isStreaming && <span className="inline-block w-2 h-5 bg-amber ml-1 animate-pulse" />}
                </p>
             </div>

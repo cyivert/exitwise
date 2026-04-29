@@ -25,3 +25,17 @@ export function getInitials(name: string) {
     .join('')
     .toUpperCase();
 }
+
+export function normalizeInterviewText(text: string) {
+  const decoded = text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+
+  return decoded
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

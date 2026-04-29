@@ -210,9 +210,25 @@ Bun.serve({
         const apiHeaders = new Headers(headers);
         apiHeaders.set("Content-Type", "application/json");
 
+        if (!sessionId) {
+          return new Response(JSON.stringify({ message: "Session not found" }), { status: 404, headers: apiHeaders });
+        }
+
         try {
           const [session] = await sql`SELECT * FROM interview_sessions WHERE id = ${sessionId}`;
-          return new Response(JSON.stringify(session), { headers: apiHeaders });
+          if (!session) return new Response(JSON.stringify({ message: "Session not found" }), { status: 404, headers: apiHeaders });
+
+          const [latestExchange] = await sql`
+            SELECT * FROM interview_exchanges
+            WHERE session_id = ${sessionId}
+            ORDER BY created_at DESC
+            LIMIT 1
+          `;
+
+          return new Response(JSON.stringify({
+            ...session,
+            latest_exchange: latestExchange ?? null,
+          }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
@@ -227,10 +243,17 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { session_id, question_text, question_type, response_text } = await req.json();
+          const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
           await sql`
-            INSERT INTO interview_exchanges (session_id, question_text, question_type, response_text)
-            VALUES (${session_id}, ${question_text}, ${question_type}, ${response_text})
+            INSERT INTO interview_exchanges (id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order)
+            VALUES (${id}, ${session_id}, ${question_text}, ${question_type}, ${response_text}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
+            ON CONFLICT (id) DO UPDATE SET
+              session_id = EXCLUDED.session_id,
+              question_text = EXCLUDED.question_text,
+              question_type = EXCLUDED.question_type,
+              response_text = EXCLUDED.response_text,
+              ai_follow_up = COALESCE(EXCLUDED.ai_follow_up, interview_exchanges.ai_follow_up),
+              sequence_order = EXCLUDED.sequence_order
           `;
           // update session status to active
           await sql`UPDATE interview_sessions SET status = 'active' WHERE id = ${session_id}`;
@@ -276,6 +299,7 @@ Bun.serve({
             - Acknowledge then ask.
             - No HR language. Speak industry language.
             - TAKING YOUR TIME. Capture HOW they think.
+            - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
