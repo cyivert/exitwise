@@ -52,8 +52,10 @@ export default function InterviewPage() {
       setSession(session.id, session.session_focus);
 
       const sessionsRes = await interviewService.getSessions(session.engagement_id);
-      if (!cancelled && sessionsRes.data) {
+      if (!cancelled && Array.isArray(sessionsRes.data)) {
         setSessions(sessionsRes.data);
+      } else if (!cancelled) {
+        setSessions([]);
       }
 
       const storeState = useInterviewStore.getState();
@@ -79,9 +81,10 @@ export default function InterviewPage() {
   }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
 
   const currentSessionNumber = sessionData?.session_number ?? null;
-  const totalSessions = sessions.length || 6;
+  const sessionList = Array.isArray(sessions) ? sessions : [];
+  const totalSessions = sessionList.length || 6;
   const remainingSessions = currentSessionNumber
-    ? sessions.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
+    ? sessionList.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
     : 0;
   const displayedQuestion = normalizeInterviewText(currentQuestion);
   const displayedFollowUp = normalizeInterviewText(streamingText);
@@ -153,7 +156,7 @@ export default function InterviewPage() {
         </div>
 
         <nav className="space-y-4">
-          {sessions.map((session) => {
+          {sessionList.map((session) => {
             const isCurrentSession = session.id === sessionId;
             const isComplete = session.status === 'complete';
 

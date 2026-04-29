@@ -184,6 +184,32 @@ Bun.serve({
         }
       }
 
+      // session list
+      if (url.pathname === "/api/sessions" && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const engagementId = url.searchParams.get("engagement_id");
+          if (!engagementId) {
+            return new Response(JSON.stringify([]), { headers: apiHeaders });
+          }
+
+          const sessions = await sql`
+            SELECT * FROM interview_sessions
+            WHERE engagement_id = ${engagementId}
+            ORDER BY session_number ASC
+          `;
+
+          return new Response(JSON.stringify(sessions), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
       // set release date
       if (url.pathname === "/api/dashboard/release" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
