@@ -8,6 +8,17 @@ import { ROUTES } from '../../config/constants';
 import type { QuestionType } from '../../types';
 import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
 
+function groupSessionExchanges(exchanges: any[]) {
+  return exchanges.reduce<Record<number, any[]>>((groups, exchange) => {
+    const sessionNumber = Number(exchange.session_number || 0);
+    if (!groups[sessionNumber]) {
+      groups[sessionNumber] = [];
+    }
+    groups[sessionNumber].push(exchange);
+    return groups;
+  }, {});
+}
+
 export default function InterviewPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -16,7 +27,6 @@ export default function InterviewPage() {
     currentQuestion, 
     currentQuestionType,
     setCurrentQuestion, 
-    streamingText, 
     setStreamingText, 
     isStreaming, 
     setIsStreaming,
@@ -36,6 +46,7 @@ export default function InterviewPage() {
 
   const [sessionData, setSessionData] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [experienceTranscript, setExperienceTranscript] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // init session from DB.
@@ -62,6 +73,12 @@ export default function InterviewPage() {
 
       setSessionData(session);
       setSession(session.id, session.session_focus);
+      const transcriptSource = Array.isArray(session.experience_transcript)
+        ? session.experience_transcript
+        : Array.isArray(session.experience_exchanges)
+          ? session.experience_exchanges
+          : [];
+      setExperienceTranscript(transcriptSource);
 
       const sessionsRes = await interviewService.getSessions(session.engagement_id);
       if (!cancelled && Array.isArray(sessionsRes.data)) {
@@ -102,7 +119,8 @@ export default function InterviewPage() {
     ? sessionList.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
     : 0;
   const displayedQuestion = normalizeInterviewText(currentQuestion);
-  const displayedFollowUp = normalizeInterviewText(streamingText);
+  const savedExperienceExchanges = Array.isArray(experienceTranscript) ? experienceTranscript : [];
+  const groupedExperienceExchanges = groupSessionExchanges(savedExperienceExchanges);
 
   const handleContinue = async () => {
     if (!draftResponse || isStreaming || !sessionData) return;
@@ -122,6 +140,15 @@ export default function InterviewPage() {
     // save to DB.
     await interviewService.saveExchange(exchange);
     addExchange(exchange);
+    setExperienceTranscript((current) => {
+      const existingIndex = current.findIndex((item) => item.id === exchange.id);
+      if (existingIndex >= 0) {
+        const next = [...current];
+        next[existingIndex] = { ...next[existingIndex], ...exchange };
+        return next;
+      }
+      return [...current, exchange];
+    });
     pushResponseHistory(draftResponse);
 
     if (isFinalQuestionInSession) {
@@ -159,6 +186,7 @@ export default function InterviewPage() {
         ...exchange,
         ai_follow_up: nextQuestion,
       });
+      setExperienceTranscript((current) => current.map((item) => item.id === exchange.id ? { ...item, ai_follow_up: nextQuestion } : item));
       setCurrentQuestion(nextQuestion, "probe");
       setStreamingText(cleanedFollowUp);
       setDraftResponse('');
@@ -277,15 +305,56 @@ export default function InterviewPage() {
             </div>
           </div>
 
-          {(streamingText || isStreaming) && (
-            <div className="mt-12 p-8 bg-green-pale/30 border border-green-pale rounded-lg animate-in fade-in slide-in-from-bottom-4">
-               <span className="label-caps text-green-mid block mb-4">ExitWise Follow-up</span>
-               <p className="text-xl font-serif italic text-text-dark leading-relaxed">
-                 {displayedFollowUp}
-                 {isStreaming && <span className="inline-block w-2 h-5 bg-amber ml-1 animate-pulse" />}
-               </p>
-            </div>
-          )}
+          <div className="mt-12 p-8 bg-green-pale/20 border border-green-pale rounded-lg">
+            <span className="label-caps text-green-mid block mb-4">Saved Answers This Experience</span>
+            {savedExperienceExchanges.length > 0 ? (
+              <div className="space-y-5 max-h-96 overflow-y-auto pr-2">
+                {Array.from({ length: 6 }, (_, index) => index + 1).map((sessionNumber) => {
+                  const sessionExchanges = groupedExperienceExchanges[sessionNumber] || [];
+                  return (
+                    <section key={sessionNumber} className="rounded-lg border border-green-pale bg-white/70 p-4">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-text-light">Session {sessionNumber}</p>
+                          <p className="font-serif text-lg text-text-dark">Saved transcript</p>
+                        </div>
+                        <span className="text-xs text-text-light uppercase tracking-[0.18em]">
+                          {sessionExchanges.length} turns
+                        </span>
+                      </div>
+
+                      {sessionExchanges.length > 0 ? (
+                        <div className="space-y-3">
+                          {sessionExchanges.map((exchange) => (
+                            <article key={exchange.id} className="rounded-md border border-green-pale/70 bg-white p-4">
+                              <p className="text-xs uppercase tracking-[0.2em] text-text-light mb-2">
+                                {sessionNumber}.{exchange.sequence_order || 1} {exchange.session_focus ? `• ${exchange.session_focus}` : ''}
+                              </p>
+                              <p className="text-sm font-medium text-text-dark mb-2">
+                                Q: {normalizeInterviewText(exchange.question_text)}
+                              </p>
+                              <p className="text-lg font-serif italic text-text-dark leading-relaxed">
+                                A: {normalizeInterviewText(exchange.response_text || 'No answer saved yet.')}
+                              </p>
+                              {exchange.ai_follow_up && (
+                                <p className="mt-3 text-sm text-text-mid border-t border-green-pale pt-3">
+                                  Follow-up: {normalizeInterviewText(exchange.ai_follow_up)}
+                                </p>
+                              )}
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-text-mid">No saved answers yet for this session.</p>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-text-mid">No saved answers yet for this experience.</p>
+            )}
+          </div>
         </main>
       </div>
     </div>

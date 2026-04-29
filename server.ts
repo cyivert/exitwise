@@ -557,6 +557,22 @@ Bun.serve({
           const [session] = await sql`SELECT * FROM interview_sessions WHERE id = ${sessionId}`;
           if (!session) return new Response(JSON.stringify({ message: "Session not found" }), { status: 404, headers: apiHeaders });
 
+          const [experience] = await sql`
+            SELECT transcript
+            FROM transfer_engagements
+            WHERE id = ${session.engagement_id}
+          `;
+
+          const experienceExchanges = await sql`
+            SELECT x.*, s.session_number, s.session_focus
+            FROM interview_exchanges x
+            JOIN interview_sessions s ON s.id = x.session_id
+            WHERE s.engagement_id = ${session.engagement_id}
+            ORDER BY s.session_number ASC, x.created_at ASC
+          `;
+
+          const sessionExchanges = experienceExchanges.filter((exchange) => exchange.session_id === sessionId);
+
           const [latestExchange] = await sql`
             SELECT * FROM interview_exchanges
             WHERE session_id = ${sessionId}
@@ -566,7 +582,10 @@ Bun.serve({
 
           return new Response(JSON.stringify({
             ...session,
+            experience_transcript: experience?.transcript ?? [],
             latest_exchange: latestExchange ?? null,
+            session_exchanges: sessionExchanges,
+            experience_exchanges: experienceExchanges,
           }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
@@ -584,7 +603,7 @@ Bun.serve({
         try {
           const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
           const [session] = await sql`
-            SELECT s.id, s.running_summary, e.org_id, e.retiree_id
+            SELECT s.id, s.session_number, s.session_focus, s.running_summary, e.id AS engagement_id, e.org_id, e.retiree_id, e.transcript
             FROM interview_sessions s
             JOIN transfer_engagements e ON e.id = s.engagement_id
             WHERE s.id = ${session_id}
@@ -627,6 +646,41 @@ Bun.serve({
           } else {
             await sql`UPDATE interview_sessions SET status = 'active' WHERE id = ${session_id}`;
           }
+
+          const transcriptEntry = {
+            id,
+            session_id,
+            session_number: session.session_number,
+            session_focus: session.session_focus,
+            org_id: session.org_id,
+            retiree_id: session.retiree_id,
+            question_text,
+            question_type,
+            response_text: response_text ?? null,
+            ai_follow_up: ai_follow_up ?? null,
+            sequence_order: sequence_order ?? 0,
+            created_at: new Date().toISOString(),
+          };
+
+          const currentTranscript = Array.isArray(session.transcript) ? session.transcript : [];
+          const nextTranscript = [...currentTranscript];
+          const existingTranscriptIndex = nextTranscript.findIndex((entry) => entry.id === id);
+
+          if (existingTranscriptIndex >= 0) {
+            nextTranscript[existingTranscriptIndex] = {
+              ...nextTranscript[existingTranscriptIndex],
+              ...transcriptEntry,
+            };
+          } else {
+            nextTranscript.push(transcriptEntry);
+          }
+
+          await sql`
+            UPDATE transfer_engagements
+            SET transcript = ${JSON.stringify(nextTranscript)}::jsonb,
+                updated_at = NOW()
+            WHERE id = ${session.engagement_id}
+          `;
           
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
         } catch (e: any) {

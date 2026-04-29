@@ -38,6 +38,7 @@ CREATE TABLE transfer_engagements (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   retiree_id UUID NOT NULL REFERENCES users(id),
   title TEXT,
+  transcript JSONB DEFAULT '[]',
   successor_id UUID REFERENCES users(id),
   retirement_date DATE,
   release_date DATE,
@@ -103,3 +104,4 @@ SET invite_code = substring(gen_random_uuid()::text, 1, 8)
 WHERE invite_code IS NULL;
 
 ALTER TABLE transfer_engagements ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE transfer_engagements ADD COLUMN IF NOT EXISTS transcript JSONB DEFAULT '[]';

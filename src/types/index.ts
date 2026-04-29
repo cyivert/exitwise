@@ -30,6 +30,7 @@ export interface TransferEngagement {
   org_id: string;
   retiree_id: string;
   title?: string;
+  transcript?: Array<Record<string, unknown>>;
   successor_id?: string;
   retirement_date: string;
   release_date?: string;
