@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { User, AuthState } from '../types';
 
 interface AuthActions {
@@ -7,17 +6,11 @@ interface AuthActions {
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
-      clearAuth: () => set({ user: null, token: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'exitwise-auth-v1',
-    }
-  )
-);
+// no persist. prevent token in localStorage. session only.
+export const useAuthStore = create<AuthState & AuthActions>()((set) => ({
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+  clearAuth: () => set({ user: null, token: null, isAuthenticated: false }),
+}));

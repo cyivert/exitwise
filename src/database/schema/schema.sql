@@ -1,27 +1,38 @@
--- organizations table
+-- drop in reverse order to clear dependencies
+DROP TABLE IF EXISTS knowledge_profiles CASCADE;
+DROP TABLE IF EXISTS interview_exchanges CASCADE;
+DROP TABLE IF EXISTS interview_sessions CASCADE;
+DROP TABLE IF EXISTS transfer_engagements CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
+
+-- enable uuid support
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- 1. organizations
 CREATE TABLE organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  industry TEXT NOT NULL, -- 'trades' | 'municipal' | 'healthcare' | 'energy' | 'other'
+  industry TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- users table
+-- 2. users
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'admin' | 'retiree' | 'successor'
+  role TEXT NOT NULL,
   job_title TEXT,
   years_exp INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- transfer engagements table
+-- 3. transfer_engagements
 CREATE TABLE transfer_engagements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -29,18 +40,18 @@ CREATE TABLE transfer_engagements (
   successor_id UUID REFERENCES users(id),
   retirement_date DATE,
   release_date DATE,
-  status TEXT DEFAULT 'pending', -- 'pending' | 'active' | 'complete'
+  status TEXT DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- interview sessions table
+-- 4. interview_sessions
 CREATE TABLE interview_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   engagement_id UUID NOT NULL REFERENCES transfer_engagements(id) ON DELETE CASCADE,
-  session_number INTEGER NOT NULL, -- 1 through 6
-  session_focus TEXT NOT NULL, -- 'orientation' | 'processes' | 'decisions' | 'relationships' | 'edge_cases' | 'review'
-  status TEXT DEFAULT 'pending', -- 'pending' | 'active' | 'complete'
+  session_number INTEGER NOT NULL,
+  session_focus TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',
   running_summary JSONB DEFAULT '[]',
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -48,24 +59,24 @@ CREATE TABLE interview_sessions (
   UNIQUE(engagement_id, session_number)
 );
 
--- interview exchanges table
+-- 5. interview_exchanges
 CREATE TABLE interview_exchanges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
-  question_type TEXT NOT NULL, -- 'anchor' | 'probe' | 'scenario' | 'contrast' | 'legacy' | 'gap_fill'
+  question_type TEXT NOT NULL,
   response_text TEXT,
   ai_follow_up TEXT,
-  knowledge_type TEXT, -- 'explicit' | 'tacit' | 'relational' | 'emergency' | 'exception'
+  knowledge_type TEXT,
   sequence_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- knowledge profiles table
+-- 6. knowledge_profiles
 CREATE TABLE knowledge_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   engagement_id UUID NOT NULL REFERENCES transfer_engagements(id) ON DELETE CASCADE,
-  section TEXT NOT NULL, -- 'processes' | 'decisions' | 'relationships' | 'edge_cases' | 'unwritten_rules' | 'advice'
+  section TEXT NOT NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   quote TEXT,

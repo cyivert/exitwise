@@ -9,7 +9,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('admin');
+  const [role, setRole] = useState<UserRole>('retiree');
   const [orgName, setOrgName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,9 +73,10 @@ export default function SignupPage() {
               onChange={(e) => setRole(e.target.value as UserRole)}
               className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid"
             >
-              <option value="admin">Admin / HR Manager</option>
               <option value="retiree">Retiree</option>
               <option value="successor">Successor</option>
+              {/* backend verify admin role. don't allow public choice. */}
+              {/* <option value="admin">Admin / HR Manager</option> */}
             </select>
           </div>
           {role === 'admin' && (
