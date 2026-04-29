@@ -1,8 +1,8 @@
-import type { ApiResponse, LoginCredentials, SignupData, User } from '../types';
+import { ApiResponse, LoginCredentials, SignupData, User } from '../types';
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
-// typed fetch wrapper
+// /caveman: typed fetch wrapper. ensure /api prefix.
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -15,8 +15,11 @@ async function apiFetch<T>(
   }
   headers.set('Content-Type', 'application/json');
 
+  // /caveman: enforce /api prefix if missing.
+  const path = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
+
   try {
-    const response = await fetch(`${env.VITE_API_URL}${endpoint}`, {
+    const response = await fetch(`${env.VITE_API_URL}${path}`, {
       ...options,
       headers,
     });
