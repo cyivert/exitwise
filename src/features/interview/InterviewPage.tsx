@@ -58,6 +58,10 @@ export default function InterviewPage() {
       const storeState = useInterviewStore.getState();
       if (storeState.sessionId && storeState.sessionId !== session.id) {
         clearQuestionHistory();
+        setCurrentQuestionIndex(0);
+        setCurrentQuestion('Session 1.1: Loading next experience...', 'anchor');
+        setDraftResponse('');
+        setStreamingText('');
       }
 
       setSessionData(session);
@@ -75,7 +79,7 @@ export default function InterviewPage() {
       const latestQuestion = session.latest_exchange?.ai_follow_up || session.latest_exchange?.question_text || '';
 
       if (!storedQuestionIsUsable) {
-        const storedQuestionIndex = latestStoreState.currentQuestionIndex || 0;
+        const storedQuestionIndex = latestStoreState.sessionId === session.id ? (latestStoreState.currentQuestionIndex || 0) : 0;
         const anchorQuestion = getQuestionProgression(session.session_focus, session.session_number, storedQuestionIndex);
         const normalizedLatestQuestion = normalizeInterviewText(latestQuestion);
         const nextQuestion = isMeaningfulFollowUp(normalizedLatestQuestion) ? normalizedLatestQuestion : anchorQuestion;
