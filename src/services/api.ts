@@ -61,6 +61,9 @@ export const dashboardService = {
   createExperience: () => apiFetch<any>('/experiences', {
     method: 'POST',
   }),
+  renameExperienceTitle: (experienceId: string) => apiFetch<any>(`/experiences/${experienceId}/title`, {
+    method: 'POST',
+  }),
   deleteExperience: (experienceId: string) => apiFetch<any>(`/experiences/${experienceId}`, {
     method: 'DELETE',
   }),

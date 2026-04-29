@@ -105,6 +105,76 @@ async function getOrganizationAdminContext(userId: string) {
   return { organization, members, experiences };
 }
 
+async function generateExperienceTitle(engagementId: string, retireeId: string) {
+  if (!genAI) {
+    throw new Error('Gemini is not configured');
+  }
+
+  const [experience] = await sql`
+    SELECT e.id, e.title, e.status, u.full_name AS retiree_name, u.job_title, o.name AS org_name
+    FROM transfer_engagements e
+    JOIN users u ON u.id = e.retiree_id
+    JOIN organizations o ON o.id = e.org_id
+    WHERE e.id = ${engagementId} AND e.retiree_id = ${retireeId}
+  `;
+
+  if (!experience) {
+    throw new Error('Experience not found');
+  }
+
+  const exchanges = await sql`
+    SELECT s.session_number, s.session_focus, x.question_text, x.response_text, x.ai_follow_up, x.created_at
+    FROM interview_sessions s
+    JOIN interview_exchanges x ON x.session_id = s.id
+    WHERE s.engagement_id = ${engagementId}
+    ORDER BY s.session_number ASC, x.created_at ASC
+    LIMIT 18
+  `;
+
+  const exchangeContext = exchanges.map((exchange, index) => {
+    const response = exchange.response_text ? normalizeContextText(exchange.response_text) : 'No response saved.';
+    const followUp = exchange.ai_follow_up ? normalizeContextText(exchange.ai_follow_up) : 'No follow-up saved.';
+    return `${index + 1}. Session ${exchange.session_number} (${exchange.session_focus})\nQ: ${normalizeContextText(exchange.question_text)}\nA: ${response}\nFollow-up: ${followUp}`;
+  }).join('\n\n');
+
+  const prompt = `
+    You are naming a retiree knowledge-transfer experience for ExitWise.
+    Create a concise, human-readable title under 7 words.
+    The title should reflect the substance of the retiree's knowledge, not the organization name.
+    Return only the title text. Do not use quotes, bullets, labels, or punctuation at the end.
+
+    Retiree: ${experience.retiree_name}
+    Role: ${experience.job_title || 'Expert Retiree'}
+    Organization: ${experience.org_name}
+    Current Title: ${experience.title || 'Untitled experience'}
+
+    Session Evidence:
+    ${exchangeContext || 'No exchanges available yet.'}
+  `;
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const result = await model.generateContent(prompt);
+  const generatedText = result.response.text().trim();
+  const cleanedTitle = normalizeContextText(generatedText)
+    .replace(/^title:\s*/i, '')
+    .replace(/^['\"`]|['\"`]$/g, '')
+    .replace(/[.]+$/g, '')
+    .trim();
+
+  if (!cleanedTitle) {
+    throw new Error('Gemini returned an empty title');
+  }
+
+  const [updatedExperience] = await sql`
+    UPDATE transfer_engagements
+    SET title = ${cleanedTitle}, updated_at = NOW()
+    WHERE id = ${engagementId} AND retiree_id = ${retireeId}
+    RETURNING *
+  `;
+
+  return updatedExperience;
+}
+
 Bun.serve({
   port: port,
   async fetch(req) {
@@ -343,6 +413,26 @@ Bun.serve({
 
           const result = await createExperienceForRetiree(retiree);
           return new Response(JSON.stringify(result), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      if (url.pathname.startsWith("/api/experiences/") && url.pathname.endsWith("/title") && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const engagementId = url.pathname.split("/")[3];
+          if (!engagementId) {
+            return new Response(JSON.stringify({ message: "Experience not found" }), { status: 404, headers: apiHeaders });
+          }
+
+          const updatedExperience = await generateExperienceTitle(engagementId, decoded.sub);
+          return new Response(JSON.stringify({ experience: updatedExperience }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }

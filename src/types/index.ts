@@ -29,6 +29,7 @@ export interface TransferEngagement {
   id: string;
   org_id: string;
   retiree_id: string;
+  title?: string;
   successor_id?: string;
   retirement_date: string;
   release_date?: string;

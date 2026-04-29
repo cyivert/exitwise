@@ -37,6 +37,7 @@ CREATE TABLE transfer_engagements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   retiree_id UUID NOT NULL REFERENCES users(id),
+  title TEXT,
   successor_id UUID REFERENCES users(id),
   retirement_date DATE,
   release_date DATE,
@@ -100,3 +101,5 @@ ALTER TABLE organizations ADD CONSTRAINT organizations_invite_code_key UNIQUE (i
 UPDATE organizations
 SET invite_code = substring(gen_random_uuid()::text, 1, 8)
 WHERE invite_code IS NULL;
+
+ALTER TABLE transfer_engagements ADD COLUMN IF NOT EXISTS title TEXT;

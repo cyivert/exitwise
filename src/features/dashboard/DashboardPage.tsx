@@ -143,6 +143,19 @@ export default function DashboardPage() {
     setIsBusy(false);
   };
 
+  const handleRenameExperienceTitle = async (experienceId: string) => {
+    setIsBusy(true);
+    const res = await dashboardService.renameExperienceTitle(experienceId);
+    if (res.data?.experience) {
+      setData((prev) => prev ? {
+        ...prev,
+        experiences: (prev.experiences || []).map((experience) => experience.id === experienceId ? { ...experience, title: res.data.experience.title } : experience),
+        activeExperience: prev.activeExperience?.id === experienceId ? { ...prev.activeExperience, title: res.data.experience.title } : prev.activeExperience,
+      } : prev);
+    }
+    setIsBusy(false);
+  };
+
   if (!isAuthenticated || !user) {
     return <Navigate to={ROUTES.LOGIN} />;
   }
@@ -289,18 +302,26 @@ export default function DashboardPage() {
                   <div className="p-6 space-y-3">
                     {(data?.experiences || []).map((experience, index) => {
                       const isSelected = experience.id === selectedExperienceId;
+                      const experienceTitle = experience.title || `Experience ${index + 1}`;
                       return (
                         <div key={experience.id} className={`flex items-center justify-between p-4 rounded-md border transition-colors ${isSelected ? 'bg-amber-light border-amber' : 'bg-cream/30 border-cream-dark/50'}`}>
                           <button
                             onClick={() => setSelectedExperienceId(experience.id)}
                             className="flex flex-col text-left flex-1"
                           >
-                            <span className="font-medium">Experience {index + 1}</span>
+                            <span className="font-medium">{experienceTitle}</span>
                             <span className="text-xs uppercase tracking-widest text-text-light">
                               {experience.release_date ? `Released ${new Date(experience.release_date).toLocaleDateString()}` : 'Private'}
                             </span>
                           </button>
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleRenameExperienceTitle(experience.id)}
+                              className="text-xs px-3 py-2 rounded border border-amber/30 text-amber hover:bg-amber-light"
+                              disabled={isBusy}
+                            >
+                              Rename with Gemini
+                            </button>
                             <button
                               onClick={() => setSelectedExperienceId(experience.id)}
                               className="text-xs px-3 py-2 rounded border border-cream-dark text-text-mid hover:text-text-dark"
