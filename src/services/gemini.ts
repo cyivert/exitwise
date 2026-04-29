@@ -1,0 +1,29 @@
+import { env } from '../config/env';
+import { useAuthStore } from '../store/authStore';
+
+// /caveman: stream ai via backend proxy. hide keys.
+export async function* streamInterviewResponse(sessionId: string, userResponse: string) {
+  const { token } = useAuthStore.getState();
+
+  const response = await fetch(`${env.VITE_API_URL}/interview/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ sessionId, userResponse }),
+  });
+
+  if (!response.ok) throw new Error('AI stream failed');
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+
+  if (!reader) return;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    yield decoder.decode(value, { stream: true });
+  }
+}
