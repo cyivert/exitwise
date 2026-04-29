@@ -105,11 +105,28 @@ async function getOrganizationAdminContext(userId: string) {
   return { organization, members, experiences };
 }
 
-async function generateExperienceTitle(engagementId: string, retireeId: string) {
-  if (!genAI) {
-    throw new Error('Gemini is not configured');
+function buildFallbackExperienceTitle(experience: { retiree_name?: string; job_title?: string | null; org_name?: string }, exchanges: Array<{ question_text: string; response_text?: string | null; ai_follow_up?: string | null }>) {
+  const sourceText = [...exchanges]
+    .reverse()
+    .map((exchange) => normalizeContextText(exchange.response_text || exchange.ai_follow_up || exchange.question_text))
+    .find((text) => text.length >= 24) || '';
+
+  const compactTitle = sourceText
+    .replace(/["'`]/g, '')
+    .replace(/[!?】【。:,;()[\]{}]/g, '')
+    .split(/\s+/)
+    .slice(0, 5)
+    .join(' ')
+    .trim();
+
+  if (compactTitle) {
+    return compactTitle.charAt(0).toUpperCase() + compactTitle.slice(1);
   }
 
+  return `${experience.job_title || 'Retiree'} Knowledge Transfer`;
+}
+
+async function generateExperienceTitle(engagementId: string, retireeId: string) {
   const [experience] = await sql`
     SELECT e.id, e.title, e.status, u.full_name AS retiree_name, u.job_title, o.name AS org_name
     FROM transfer_engagements e
@@ -152,17 +169,25 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
     ${exchangeContext || 'No exchanges available yet.'}
   `;
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  const result = await model.generateContent(prompt);
-  const generatedText = result.response.text().trim();
-  const cleanedTitle = normalizeContextText(generatedText)
-    .replace(/^title:\s*/i, '')
-    .replace(/^['\"`]|['\"`]$/g, '')
-    .replace(/[.]+$/g, '')
-    .trim();
+  let cleanedTitle = '';
+
+  try {
+    if (genAI) {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent(prompt);
+      const generatedText = result.response.text().trim();
+      cleanedTitle = normalizeContextText(generatedText)
+        .replace(/^title:\s*/i, '')
+        .replace(/^['\"`]|['\"`]$/g, '')
+        .replace(/[.]+$/g, '')
+        .trim();
+    }
+  } catch {
+    cleanedTitle = '';
+  }
 
   if (!cleanedTitle) {
-    throw new Error('Gemini returned an empty title');
+    cleanedTitle = buildFallbackExperienceTitle(experience, exchanges);
   }
 
   const [updatedExperience] = await sql`

@@ -320,7 +320,7 @@ export default function DashboardPage() {
                               className="text-xs px-3 py-2 rounded border border-amber/30 text-amber hover:bg-amber-light"
                               disabled={isBusy}
                             >
-                              Rename with Gemini
+                              Rename with AI
                             </button>
                             <button
                               onClick={() => setSelectedExperienceId(experience.id)}

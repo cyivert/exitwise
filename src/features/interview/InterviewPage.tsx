@@ -59,7 +59,6 @@ export default function InterviewPage() {
       if (storeState.sessionId && storeState.sessionId !== session.id) {
         clearQuestionHistory();
         setCurrentQuestionIndex(0);
-        setCurrentQuestion('Session 1.1: Loading next experience...', 'anchor');
         setDraftResponse('');
         setStreamingText('');
       }
@@ -167,7 +166,7 @@ export default function InterviewPage() {
         ai_follow_up: nextQuestion,
       });
       setCurrentQuestion(nextQuestion, "probe");
-      setStreamingText(nextQuestion);
+      setStreamingText(cleanedFollowUp);
       setDraftResponse('');
     } catch (error) {
       console.error(error);
