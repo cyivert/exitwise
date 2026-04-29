@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import sql from "./src/database/db";
 
-// /caveman: Railway/Bun entry point. dynamic port + security.
+// Railway/Bun entry point. dynamic port + security.
 const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-for-dev";
@@ -25,7 +25,7 @@ Bun.serve({
   async fetch(req) {
     const url = new URL(req.url);
     
-    // /caveman: security headers.
+    // security headers.
     const headers = new Headers({
       "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8080 https://exitwise.app; object-src 'none';",
       "X-Content-Type-Options": "nosniff",
@@ -33,12 +33,12 @@ Bun.serve({
       "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     });
 
-    // /caveman: api routes.
+    // api routes.
     if (url.pathname.startsWith("/api")) {
       const apiHeaders = new Headers(headers);
       apiHeaders.set("Content-Type", "application/json");
 
-      // /caveman: auth signup
+      // auth signup
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
         try {
           const { email, password, full_name, role, org_name } = await req.json();
@@ -60,7 +60,7 @@ Bun.serve({
         }
       }
 
-      // /caveman: auth login
+      // auth login
       if (url.pathname === "/api/auth/login" && req.method === "POST") {
         try {
           const { email, password } = await req.json();
@@ -76,7 +76,7 @@ Bun.serve({
         }
       }
 
-      // /caveman: gemini stream proxy
+      // gemini stream proxy
       if (url.pathname === "/api/interview/stream" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
@@ -86,7 +86,7 @@ Bun.serve({
         try {
           const { sessionId, userResponse } = await req.json();
           
-          // /caveman: fetch context from DB.
+          // fetch context from DB.
           const [session] = await sql`SELECT * FROM interview_sessions WHERE id = ${sessionId}`;
           const [retiree] = await sql`SELECT * FROM users WHERE id = ${decoded.sub}`;
 
