@@ -106,6 +106,8 @@ export default function InterviewPage() {
 
   const handleContinue = async () => {
     if (!draftResponse || isStreaming || !sessionData) return;
+    const nextIndex = currentQuestionIndex + 1;
+    const isFinalQuestionInSession = nextIndex >= 3;
 
     const exchange = {
       id: crypto.randomUUID(),
@@ -122,6 +124,22 @@ export default function InterviewPage() {
     addExchange(exchange);
     pushResponseHistory(draftResponse);
 
+    if (isFinalQuestionInSession) {
+      const nextSession = sessionList.find((session) => session.session_number === sessionData.session_number + 1);
+      clearQuestionHistory();
+      setCurrentQuestionIndex(0);
+      setDraftResponse('');
+      setStreamingText('');
+
+      if (nextSession?.id) {
+        navigate(`/interview/${nextSession.id}`);
+      } else {
+        navigate(ROUTES.DASHBOARD);
+      }
+
+      return;
+    }
+
     setIsStreaming(true);
     setStreamingText('');
 
@@ -133,7 +151,6 @@ export default function InterviewPage() {
       }
       
       const cleanedFollowUp = normalizeInterviewText(fullResponse);
-      const nextIndex = currentQuestionIndex + 1;
       const scriptedFallback = getQuestionProgression(sessionData.session_focus, sessionData.session_number, nextIndex);
       const nextQuestion = isMeaningfulFollowUp(cleanedFollowUp)
         ? cleanedFollowUp
