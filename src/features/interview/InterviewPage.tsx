@@ -27,7 +27,7 @@ export default function InterviewPage() {
     setDraftResponse,
     pushQuestionHistory,
     pushResponseHistory,
-    clearQuestionHistory,
+    resetQuestionFlow,
     goBackQuestion,
     questionHistory,
     currentQuestionIndex,
@@ -57,10 +57,7 @@ export default function InterviewPage() {
 
       const storeState = useInterviewStore.getState();
       if (storeState.sessionId && storeState.sessionId !== session.id) {
-        clearQuestionHistory();
-        setCurrentQuestionIndex(0);
-        setDraftResponse('');
-        setStreamingText('');
+        resetQuestionFlow();
       }
 
       setSessionData(session);
@@ -129,10 +126,7 @@ export default function InterviewPage() {
 
     if (isFinalQuestionInSession) {
       const nextSession = sessionList.find((session) => session.session_number === sessionData.session_number + 1);
-      clearQuestionHistory();
-      setCurrentQuestionIndex(0);
-      setDraftResponse('');
-      setStreamingText('');
+      resetQuestionFlow();
 
       if (nextSession?.id) {
         navigate(`/interview/${nextSession.id}`);

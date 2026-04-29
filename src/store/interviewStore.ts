@@ -25,6 +25,7 @@ interface InterviewActions {
   pushQuestionHistory: (question: string, type: string) => void;
   pushResponseHistory: (response: string) => void;
   clearQuestionHistory: () => void;
+  resetQuestionFlow: () => void;
   goBackQuestion: () => void;
   setCurrentQuestionIndex: (index: number) => void;
   setDraftResponse: (response: string) => void;
@@ -60,6 +61,16 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
           responseHistory: [...state.responseHistory, response].slice(-8),
         })),
       clearQuestionHistory: () => set({ questionHistory: [], currentQuestionIndex: 0 }),
+      resetQuestionFlow: () => set({
+        currentQuestion: '',
+        currentQuestionType: 'anchor',
+        draftResponse: '',
+        streamingText: '',
+        isStreaming: false,
+        questionHistory: [],
+        responseHistory: [],
+        currentQuestionIndex: 0,
+      }),
       goBackQuestion: () =>
         set((state) => {
           if (state.questionHistory.length === 0) return state;
