@@ -12,6 +12,7 @@ interface InterviewState {
   currentQuestionType: string;
   draftResponse: string;
   questionHistory: Array<{ question: string; type: string }>;
+  currentQuestionIndex: number;
 }
 
 interface InterviewActions {
@@ -23,6 +24,7 @@ interface InterviewActions {
   pushQuestionHistory: (question: string, type: string) => void;
   clearQuestionHistory: () => void;
   goBackQuestion: () => void;
+  setCurrentQuestionIndex: (index: number) => void;
   setDraftResponse: (response: string) => void;
   reset: () => void;
 }
@@ -39,16 +41,18 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
       currentQuestionType: 'anchor',
       draftResponse: '',
       questionHistory: [],
+      currentQuestionIndex: 0,
       setSession: (id, focus) => set({ sessionId: id, sessionFocus: focus }),
       addExchange: (exchange) => set((state) => ({ exchanges: [...state.exchanges, exchange] })),
       setStreamingText: (text) => set({ streamingText: text }),
       setIsStreaming: (isStreaming) => set({ isStreaming }),
       setCurrentQuestion: (question, type) => set({ currentQuestion: question, currentQuestionType: type }),
+      setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
       pushQuestionHistory: (question, type) =>
         set((state) => ({
           questionHistory: [...state.questionHistory, { question, type }].slice(-8),
         })),
-      clearQuestionHistory: () => set({ questionHistory: [] }),
+      clearQuestionHistory: () => set({ questionHistory: [], currentQuestionIndex: 0 }),
       goBackQuestion: () =>
         set((state) => {
           if (state.questionHistory.length === 0) return state;
@@ -64,6 +68,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
             streamingText: '',
             isStreaming: false,
             questionHistory: nextHistory,
+            currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1),
           };
         }),
       setDraftResponse: (draftResponse) => set({ draftResponse }),
@@ -77,6 +82,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestionType: 'anchor',
         draftResponse: '',
         questionHistory: [],
+        currentQuestionIndex: 0,
       }),
     }),
     {
@@ -90,6 +96,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestionType: state.currentQuestionType,
         draftResponse: state.draftResponse,
         questionHistory: state.questionHistory,
+        currentQuestionIndex: state.currentQuestionIndex,
       }),
     }
   )

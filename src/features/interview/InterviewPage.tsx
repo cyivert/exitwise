@@ -6,7 +6,7 @@ import { streamInterviewResponse } from '../../services/gemini';
 import { interviewService } from '../../services/api';
 import { ROUTES } from '../../config/constants';
 import type { QuestionType } from '../../types';
-import { getSessionFallbackQuestion, getInitials, isMeaningfulFollowUp, normalizeInterviewText } from '../../utils/helpers';
+import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
 
 export default function InterviewPage() {
   const { sessionId } = useParams();
@@ -29,6 +29,8 @@ export default function InterviewPage() {
     clearQuestionHistory,
     goBackQuestion,
     questionHistory,
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
   } = useInterviewStore();
 
   const [sessionData, setSessionData] = useState<any>(null);
@@ -72,10 +74,11 @@ export default function InterviewPage() {
       const latestQuestion = session.latest_exchange?.ai_follow_up || session.latest_exchange?.question_text || '';
 
       if (!hasStoredQuestionForSession) {
-        const anchorQuestion = getSessionFallbackQuestion(session.session_focus, session.session_number);
+        const anchorQuestion = getQuestionProgression(session.session_focus, session.session_number, 0);
         const normalizedLatestQuestion = normalizeInterviewText(latestQuestion);
         const nextQuestion = isMeaningfulFollowUp(normalizedLatestQuestion) ? normalizedLatestQuestion : anchorQuestion;
         setCurrentQuestion(nextQuestion, latestQuestion ? 'probe' : 'anchor');
+        setCurrentQuestionIndex(0);
         setDraftResponse('');
         setStreamingText('');
       }
@@ -127,11 +130,14 @@ export default function InterviewPage() {
       }
       
       const cleanedFollowUp = normalizeInterviewText(fullResponse);
+      const nextIndex = currentQuestionIndex + 1;
+      const scriptedFallback = getQuestionProgression(sessionData.session_focus, sessionData.session_number, nextIndex);
       const nextQuestion = isMeaningfulFollowUp(cleanedFollowUp)
         ? cleanedFollowUp
-        : getSessionFallbackQuestion(sessionData.session_focus, sessionData.session_number);
+        : scriptedFallback;
 
       pushQuestionHistory(currentQuestion, currentQuestionType);
+      setCurrentQuestionIndex(nextIndex);
       await interviewService.saveExchange({
         ...exchange,
         ai_follow_up: nextQuestion,
@@ -203,19 +209,6 @@ export default function InterviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {questionHistory.length > 0 && (
-              <button
-                onClick={() => {
-                  goBackQuestion();
-                  setDraftResponse('');
-                  setStreamingText('');
-                }}
-                className="label-caps bg-white px-3 py-1 rounded border border-cream-dark text-text-mid hover:text-text-dark transition-colors"
-                type="button"
-              >
-                Back to previous script
-              </button>
-            )}
             <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
           </div>
         </header>
@@ -237,20 +230,34 @@ export default function InterviewPage() {
               disabled={isStreaming}
             />
             
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-3 flex-wrap">
               <button 
                 onClick={() => navigate(ROUTES.DASHBOARD)}
                 className="text-text-light hover:text-text-dark transition-colors"
               >
                 Save and exit
               </button>
-              <button 
-                onClick={handleContinue}
-                className={`btn-primary px-12 py-3 ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={isStreaming}
-              >
-                {isStreaming ? 'AI is thinking...' : 'Continue'}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    goBackQuestion();
+                    setDraftResponse('');
+                    setStreamingText('');
+                  }}
+                  disabled={questionHistory.length === 0 || isStreaming}
+                  className="px-5 py-3 rounded border border-cream-dark text-text-mid hover:text-text-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  type="button"
+                >
+                  Back
+                </button>
+                <button 
+                  onClick={handleContinue}
+                  className={`btn-primary px-12 py-3 ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isStreaming}
+                >
+                  {isStreaming ? 'AI is thinking...' : 'Continue'}
+                </button>
+              </div>
             </div>
           </div>
 
