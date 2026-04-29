@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [isBusy, setIsBusy] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<any[]>([]);
   const [memberForm, setMemberForm] = useState({ full_name: '', email: '', password: '', role: 'retiree', job_title: '', years_exp: '' });
+  const [adminTab, setAdminTab] = useState<'overview' | 'members' | 'experiences'>('overview');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -175,78 +176,99 @@ export default function DashboardPage() {
         ) : (
           <>
             {isOrganizationAdmin && (
-              <div className="grid md:grid-cols-4 gap-6 mb-12">
-                <div className="md:col-span-4 bg-white p-6 rounded-lg border border-cream-dark shadow-sm flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <p className="label-caps mb-2">Organization Admin</p>
-                    <h3 className="text-2xl font-serif">{data?.organization?.name || 'Organization'}</h3>
-                    <p className="text-text-light">Manage retirees, successors, and admin users in this organization.</p>
-                  </div>
-                  <div className="text-sm text-text-light">
-                    {data?.members?.length || 0} members • {data?.experiences?.length || 0} experiences
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {isOrganizationAdmin && (
               <div className="space-y-8 mb-12">
                 <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-cream-dark flex justify-between items-center gap-4">
+                  <div className="p-6 border-b border-cream-dark flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
                     <div>
-                      <h3 className="text-xl font-serif">Organization Members</h3>
-                      <p className="text-sm text-text-light">Create or remove users for this organization.</p>
+                      <p className="label-caps mb-2">Organization Admin Panel</p>
+                      <h3 className="text-2xl font-serif">{data?.organization?.name || 'Organization'}</h3>
+                      <p className="text-text-light">Manage organization members, retiree experiences, and access from one place.</p>
+                    </div>
+                    <div className="text-sm text-text-light">
+                      {data?.members?.length || 0} members • {data?.experiences?.length || 0} experiences
                     </div>
                   </div>
-                  <div className="p-6 grid md:grid-cols-2 gap-6 border-b border-cream-dark">
-                    <input value={memberForm.full_name} onChange={(e) => setMemberForm((prev) => ({ ...prev, full_name: e.target.value }))} placeholder="Full name" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
-                    <input value={memberForm.email} onChange={(e) => setMemberForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Email" type="email" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
-                    <input value={memberForm.password} onChange={(e) => setMemberForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Temporary password" type="password" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
-                    <select value={memberForm.role} onChange={(e) => setMemberForm((prev) => ({ ...prev, role: e.target.value }))} className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid">
-                      <option value="retiree">Retiree</option>
-                      <option value="successor">Successor</option>
-                      <option value="organization_admin">Organization Admin</option>
-                    </select>
-                    <input value={memberForm.job_title} onChange={(e) => setMemberForm((prev) => ({ ...prev, job_title: e.target.value }))} placeholder="Job title (optional)" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
-                    <input value={memberForm.years_exp} onChange={(e) => setMemberForm((prev) => ({ ...prev, years_exp: e.target.value }))} placeholder="Years experience (optional)" type="number" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
-                  </div>
-                  <div className="p-6 flex justify-end">
-                    <button onClick={handleCreateMember} className="btn-primary" disabled={isBusy}>Add Member</button>
-                  </div>
-                  <div className="p-6 space-y-3">
-                    {(data?.members || []).map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
-                        <div>
-                          <p className="font-medium">{member.full_name}</p>
-                          <p className="text-xs uppercase tracking-widest text-text-light">{member.role} • {member.email}</p>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteMember(member.id)}
-                          className="text-xs px-3 py-2 rounded border border-red-200 text-red-700 hover:bg-red-50"
-                          disabled={isBusy || member.id === user.id}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-cream-dark">
-                    <h3 className="text-xl font-serif">Organization Experiences</h3>
-                    <p className="text-sm text-text-light">Retiree knowledge sessions across the organization.</p>
+                  <div className="px-6 pt-6 flex flex-wrap gap-2 border-b border-cream-dark bg-cream/25">
+                    <button onClick={() => setAdminTab('overview')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'overview' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                      Overview
+                    </button>
+                    <button onClick={() => setAdminTab('members')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'members' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                      Members
+                    </button>
+                    <button onClick={() => setAdminTab('experiences')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'experiences' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                      Experiences
+                    </button>
                   </div>
-                  <div className="p-6 space-y-4">
-                    {(data?.experiences || []).map((experience) => (
-                      <div key={experience.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
-                        <div>
-                          <p className="font-medium">{experience.retiree_name || 'Retiree'} • {experience.session_focus}</p>
-                          <p className="text-xs uppercase tracking-widest text-text-light">Session {experience.session_number} • {experience.status}</p>
+
+                  <div className="p-6 space-y-8">
+                    {adminTab === 'overview' && (
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
+                          <p className="label-caps mb-2">Members</p>
+                          <p className="text-3xl font-serif text-text-dark">{data?.members?.length || 0}</p>
                         </div>
-                        <span className="text-xs uppercase tracking-widest text-text-light font-bold">{experience.release_date ? 'Released' : 'Private'}</span>
+                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
+                          <p className="label-caps mb-2">Experiences</p>
+                          <p className="text-3xl font-serif text-text-dark">{data?.experiences?.length || 0}</p>
+                        </div>
+                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
+                          <p className="label-caps mb-2">Private Experiences</p>
+                          <p className="text-3xl font-serif text-text-dark">{(data?.experiences || []).filter((experience) => !experience.release_date).length}</p>
+                        </div>
                       </div>
-                    ))}
+                    )}
+
+                    {adminTab === 'members' && (
+                      <div className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <input value={memberForm.full_name} onChange={(e) => setMemberForm((prev) => ({ ...prev, full_name: e.target.value }))} placeholder="Full name" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                          <input value={memberForm.email} onChange={(e) => setMemberForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Email" type="email" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                          <input value={memberForm.password} onChange={(e) => setMemberForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Temporary password" type="password" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                          <select value={memberForm.role} onChange={(e) => setMemberForm((prev) => ({ ...prev, role: e.target.value }))} className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid">
+                            <option value="retiree">Retiree</option>
+                            <option value="successor">Successor</option>
+                            <option value="organization_admin">Organization Admin</option>
+                          </select>
+                          <input value={memberForm.job_title} onChange={(e) => setMemberForm((prev) => ({ ...prev, job_title: e.target.value }))} placeholder="Job title (optional)" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                          <input value={memberForm.years_exp} onChange={(e) => setMemberForm((prev) => ({ ...prev, years_exp: e.target.value }))} placeholder="Years experience (optional)" type="number" className="w-full px-4 py-2 border border-cream-dark rounded-md focus:outline-none focus:ring-1 focus:ring-green-mid" />
+                        </div>
+                        <div className="flex justify-end">
+                          <button onClick={handleCreateMember} className="btn-primary" disabled={isBusy}>Add Member</button>
+                        </div>
+                        <div className="space-y-3">
+                          {(data?.members || []).map((member) => (
+                            <div key={member.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
+                              <div>
+                                <p className="font-medium">{member.full_name}</p>
+                                <p className="text-xs uppercase tracking-widest text-text-light">{member.role} • {member.email}</p>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteMember(member.id)}
+                                className="text-xs px-3 py-2 rounded border border-red-200 text-red-700 hover:bg-red-50"
+                                disabled={isBusy || member.id === user.id}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {adminTab === 'experiences' && (
+                      <div className="space-y-4">
+                        {(data?.experiences || []).map((experience) => (
+                          <div key={experience.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
+                            <div>
+                              <p className="font-medium">{experience.retiree_name || 'Retiree'} • {experience.session_focus}</p>
+                              <p className="text-xs uppercase tracking-widest text-text-light">Session {experience.session_number} • {experience.status}</p>
+                            </div>
+                            <span className="text-xs uppercase tracking-widest text-text-light font-bold">{experience.release_date ? 'Released' : 'Private'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
