@@ -126,12 +126,118 @@ Bun.serve({
           if (!user || !(await Bun.password.verify(password, user.password_hash))) {
             return new Response(JSON.stringify({ message: "Invalid credentials" }), { status: 401, headers: apiHeaders });
           }
+
+          // hackathon auto-setup: ensure retiree has an engagement and 6 sessions.
+          if (user.role === 'retiree') {
+            const [engagement] = await sql`SELECT id FROM transfer_engagements WHERE retiree_id = ${user.id}`;
+            if (!engagement) {
+              const [newEng] = await sql`
+                INSERT INTO transfer_engagements (org_id, retiree_id, status)
+                VALUES (${user.org_id}, ${user.id}, 'active')
+                RETURNING id
+              `;
+              const sessionTypes = ['Orientation', 'Processes', 'Decisions', 'Relationships', 'Edge Cases', 'Review'];
+              for (let i = 0; i < sessionTypes.length; i++) {
+                await sql`
+                  INSERT INTO interview_sessions (engagement_id, session_number, session_focus, status)
+                  VALUES (${newEng.id}, ${i + 1}, ${sessionTypes[i]}, ${i === 0 ? 'pending' : 'pending'})
+                `;
+              }
+            }
+          }
+
           const { password_hash, ...userSafe } = user;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user: userSafe, token }), { headers: apiHeaders });
         } catch (e: any) {
           const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
           return new Response(JSON.stringify({ message }), { status: 400, headers: apiHeaders });
+        }
+      }
+
+      // dashboard fetch
+      if (url.pathname === "/api/dashboard" && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          if (decoded.role === 'retiree') {
+            const [engagement] = await sql`SELECT * FROM transfer_engagements WHERE retiree_id = ${decoded.sub}`;
+            if (!engagement) return new Response(JSON.stringify({ sessions: [] }), { headers: apiHeaders });
+            
+            const sessions = await sql`SELECT * FROM interview_sessions WHERE engagement_id = ${engagement.id} ORDER BY session_number ASC`;
+            return new Response(JSON.stringify({ engagement, sessions }), { headers: apiHeaders });
+          }
+          
+          if (decoded.role === 'successor') {
+            const [engagement] = await sql`SELECT * FROM transfer_engagements WHERE successor_id = ${decoded.sub} OR org_id IN (SELECT org_id FROM users WHERE id = ${decoded.sub})`;
+            if (!engagement) return new Response(JSON.stringify({ engagement: null }), { headers: apiHeaders });
+            return new Response(JSON.stringify({ engagement }), { headers: apiHeaders });
+          }
+
+          return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // set release date
+      if (url.pathname === "/api/dashboard/release" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const { release_date } = await req.json();
+          await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE retiree_id = ${decoded.sub}`;
+          return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // session detail
+      if (url.pathname.startsWith("/api/sessions/") && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+        
+        const sessionId = url.pathname.split("/").pop();
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const [session] = await sql`SELECT * FROM interview_sessions WHERE id = ${sessionId}`;
+          return new Response(JSON.stringify(session), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // save exchange
+      if (url.pathname === "/api/exchanges" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+
+        try {
+          const { session_id, question_text, question_type, response_text } = await req.json();
+          await sql`
+            INSERT INTO interview_exchanges (session_id, question_text, question_type, response_text)
+            VALUES (${session_id}, ${question_text}, ${question_type}, ${response_text})
+          `;
+          // update session status to active
+          await sql`UPDATE interview_sessions SET status = 'active' WHERE id = ${session_id}`;
+          
+          return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 

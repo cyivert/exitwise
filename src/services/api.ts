@@ -56,6 +56,14 @@ export const interviewService = {
   }),
 };
 
+export const dashboardService = {
+  getDashboard: () => apiFetch<{ engagement: any; sessions: any[] }>('/dashboard'),
+  updateReleaseDate: (date: string) => apiFetch<any>('/dashboard/release', {
+    method: 'POST',
+    body: JSON.stringify({ release_date: date }),
+  }),
+};
+
 export const profileService = {
   getProfile: (engagementId: string) => apiFetch<any>(`/profiles/${engagementId}`),
   queryProfile: (engagementId: string, query: string) => apiFetch<any>(`/profiles/${engagementId}/query`, {
