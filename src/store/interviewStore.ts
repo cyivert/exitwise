@@ -11,6 +11,7 @@ interface InterviewState {
   currentQuestion: string;
   currentQuestionType: string;
   draftResponse: string;
+  questionHistory: Array<{ question: string; type: string }>;
 }
 
 interface InterviewActions {
@@ -19,6 +20,9 @@ interface InterviewActions {
   setStreamingText: (text: string) => void;
   setIsStreaming: (isStreaming: boolean) => void;
   setCurrentQuestion: (question: string, type: string) => void;
+  pushQuestionHistory: (question: string, type: string) => void;
+  clearQuestionHistory: () => void;
+  goBackQuestion: () => void;
   setDraftResponse: (response: string) => void;
   reset: () => void;
 }
@@ -34,11 +38,34 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
       currentQuestion: '',
       currentQuestionType: 'anchor',
       draftResponse: '',
+      questionHistory: [],
       setSession: (id, focus) => set({ sessionId: id, sessionFocus: focus }),
       addExchange: (exchange) => set((state) => ({ exchanges: [...state.exchanges, exchange] })),
       setStreamingText: (text) => set({ streamingText: text }),
       setIsStreaming: (isStreaming) => set({ isStreaming }),
       setCurrentQuestion: (question, type) => set({ currentQuestion: question, currentQuestionType: type }),
+      pushQuestionHistory: (question, type) =>
+        set((state) => ({
+          questionHistory: [...state.questionHistory, { question, type }].slice(-8),
+        })),
+      clearQuestionHistory: () => set({ questionHistory: [] }),
+      goBackQuestion: () =>
+        set((state) => {
+          if (state.questionHistory.length === 0) return state;
+
+          const nextHistory = [...state.questionHistory];
+          const previous = nextHistory.pop();
+
+          if (!previous) return state;
+
+          return {
+            currentQuestion: previous.question,
+            currentQuestionType: previous.type,
+            streamingText: '',
+            isStreaming: false,
+            questionHistory: nextHistory,
+          };
+        }),
       setDraftResponse: (draftResponse) => set({ draftResponse }),
       reset: () => set({
         sessionId: null,
@@ -49,6 +76,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestion: '',
         currentQuestionType: 'anchor',
         draftResponse: '',
+        questionHistory: [],
       }),
     }),
     {
@@ -61,6 +89,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()(
         currentQuestion: state.currentQuestion,
         currentQuestionType: state.currentQuestionType,
         draftResponse: state.draftResponse,
+        questionHistory: state.questionHistory,
       }),
     }
   )

@@ -6,7 +6,7 @@ import { streamInterviewResponse } from '../../services/gemini';
 import { interviewService } from '../../services/api';
 import { ROUTES } from '../../config/constants';
 import type { QuestionType } from '../../types';
-import { normalizeInterviewText, getInitials } from '../../utils/helpers';
+import { getSessionFallbackQuestion, getInitials, isMeaningfulFollowUp, normalizeInterviewText } from '../../utils/helpers';
 
 export default function InterviewPage() {
   const { sessionId } = useParams();
@@ -25,6 +25,10 @@ export default function InterviewPage() {
     sessionFocus,
     draftResponse,
     setDraftResponse,
+    pushQuestionHistory,
+    clearQuestionHistory,
+    goBackQuestion,
+    questionHistory,
   } = useInterviewStore();
 
   const [sessionData, setSessionData] = useState<any>(null);
@@ -48,6 +52,11 @@ export default function InterviewPage() {
         return;
       }
 
+      const storeState = useInterviewStore.getState();
+      if (storeState.sessionId && storeState.sessionId !== session.id) {
+        clearQuestionHistory();
+      }
+
       setSessionData(session);
       setSession(session.id, session.session_focus);
 
@@ -58,13 +67,14 @@ export default function InterviewPage() {
         setSessions([]);
       }
 
-      const storeState = useInterviewStore.getState();
-      const hasStoredQuestionForSession = storeState.sessionId === session.id && Boolean(storeState.currentQuestion);
+      const latestStoreState = useInterviewStore.getState();
+      const hasStoredQuestionForSession = latestStoreState.sessionId === session.id && Boolean(latestStoreState.currentQuestion);
       const latestQuestion = session.latest_exchange?.ai_follow_up || session.latest_exchange?.question_text || '';
 
       if (!hasStoredQuestionForSession) {
-        const anchorQuestion = `Welcome to Session ${session.session_number}. Let's focus on ${session.session_focus}. To start, describe a complex situation you handled recently where your experience was the deciding factor.`;
-        const nextQuestion = latestQuestion ? normalizeInterviewText(latestQuestion) : anchorQuestion;
+        const anchorQuestion = getSessionFallbackQuestion(session.session_focus, session.session_number);
+        const normalizedLatestQuestion = normalizeInterviewText(latestQuestion);
+        const nextQuestion = isMeaningfulFollowUp(normalizedLatestQuestion) ? normalizedLatestQuestion : anchorQuestion;
         setCurrentQuestion(nextQuestion, latestQuestion ? 'probe' : 'anchor');
         setDraftResponse('');
         setStreamingText('');
@@ -117,12 +127,17 @@ export default function InterviewPage() {
       }
       
       const cleanedFollowUp = normalizeInterviewText(fullResponse);
+      const nextQuestion = isMeaningfulFollowUp(cleanedFollowUp)
+        ? cleanedFollowUp
+        : getSessionFallbackQuestion(sessionData.session_focus, sessionData.session_number);
+
+      pushQuestionHistory(currentQuestion, currentQuestionType);
       await interviewService.saveExchange({
         ...exchange,
-        ai_follow_up: cleanedFollowUp,
+        ai_follow_up: nextQuestion,
       });
-      setCurrentQuestion(cleanedFollowUp, "probe");
-      setStreamingText(cleanedFollowUp);
+      setCurrentQuestion(nextQuestion, "probe");
+      setStreamingText(nextQuestion);
       setDraftResponse('');
     } catch (error) {
       console.error(error);
@@ -187,7 +202,22 @@ export default function InterviewPage() {
               Exit<span className="text-amber italic">Wise</span>
             </div>
           </div>
-          <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
+          <div className="flex items-center gap-3">
+            {questionHistory.length > 0 && (
+              <button
+                onClick={() => {
+                  goBackQuestion();
+                  setDraftResponse('');
+                  setStreamingText('');
+                }}
+                className="label-caps bg-white px-3 py-1 rounded border border-cream-dark text-text-mid hover:text-text-dark transition-colors"
+                type="button"
+              >
+                Back to previous script
+              </button>
+            )}
+            <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
+          </div>
         </header>
 
         <main className="grow p-12 max-w-3xl mx-auto w-full">
