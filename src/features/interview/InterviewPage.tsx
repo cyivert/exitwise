@@ -104,8 +104,17 @@ export default function InterviewPage() {
       {/* Main Area */}
       <div className="flex-grow flex flex-col">
         <header className="p-6 flex justify-between items-center border-b border-cream-dark">
-          <div className="font-serif text-xl cursor-pointer" onClick={() => navigate(ROUTES.DASHBOARD)}>
-            Exit<span className="text-amber italic">Wise</span>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => navigate(ROUTES.DASHBOARD)}
+              className="p-2 hover:bg-cream rounded-full transition-colors"
+              title="Back to Dashboard"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div className="font-serif text-xl cursor-pointer" onClick={() => navigate(ROUTES.DASHBOARD)}>
+              Exit<span className="text-amber italic">Wise</span>
+            </div>
           </div>
           <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
         </header>
