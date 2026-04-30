@@ -944,6 +944,7 @@ Successor's question: ${message}`;
 
           return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
+          console.error('[successor/stream]', e);
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
