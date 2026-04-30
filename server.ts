@@ -11,7 +11,7 @@ const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/responses';
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/messages';
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
@@ -72,7 +72,7 @@ async function generateGeminiStream(prompt: string | string[]) {
     throw new Error('AI configuration missing');
   }
 
-  const models = ["gemini-3.1-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -90,16 +90,16 @@ async function generateGeminiStream(prompt: string | string[]) {
 async function generateAnthropicStream(prompt: string | string[]) {
   if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
 
-  const models = [process.env.ANTHROPIC_MODEL || 'claude-2.1', 'claude-2.0'];
+  const models = [process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
   let lastError: unknown = null;
 
   for (const modelName of models) {
     try {
+      const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
       const body = {
         model: modelName,
-        input: Array.isArray(prompt) ? prompt.join('\n') : String(prompt),
+        messages: [{ role: 'user', content: promptText }],
         max_tokens: 1024,
-        temperature: 0.2,
         stream: true,
       };
 
@@ -107,14 +107,13 @@ async function generateAnthropicStream(prompt: string | string[]) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream, application/json',
-          'X-API-Key': ANTHROPIC_API_KEY,
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify(body),
       });
 
       if (!res.ok) {
-        // try to parse JSON error body for helpful debugging
         let bodyText = '';
         try {
           const json = await res.json();
@@ -126,64 +125,39 @@ async function generateAnthropicStream(prompt: string | string[]) {
         throw new Error(`Anthropic error ${res.status}: ${bodyText}`);
       }
 
-      const contentType = res.headers.get('content-type') || '';
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No stream from Anthropic');
 
-      // If response is SSE/text-event-stream, parse data: frames. Otherwise stream raw chunks.
-      if (contentType.includes('text/event-stream') || contentType.includes('event-stream')) {
-        async function* sseGenerator() {
-          const decoder = new TextDecoder();
-          let buffer = '';
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            let idx;
-            while ((idx = buffer.indexOf('\n\n')) !== -1) {
-              const raw = buffer.slice(0, idx).trim();
-              buffer = buffer.slice(idx + 2);
-              // each event may contain lines starting with 'data: '
-              const lines = raw.split(/\n/).map(l => l.replace(/^data:\s?/, ''));
-              for (const line of lines) {
-                if (!line || line === '[DONE]') continue;
-                // attempt to extract text from JSON event
-                try {
-                  const obj = JSON.parse(line);
-                  // common keys: 'completion' or 'delta' or 'text'
-                  const text = obj.completion ?? obj.delta ?? obj.text ?? obj.chunk ?? JSON.stringify(obj);
-                  yield { text: () => String(text) };
-                } catch {
-                  yield { text: () => line };
-                }
-              }
-            }
-          }
-          if (buffer.trim()) {
-            try {
-              const obj = JSON.parse(buffer.trim());
-              const text = obj.completion ?? obj.delta ?? obj.text ?? obj.chunk ?? JSON.stringify(obj);
-              yield { text: () => String(text) };
-            } catch {
-              yield { text: () => buffer };
-            }
-          }
-        }
-        return { stream: sseGenerator() };
-      }
-
-      // fallback: stream raw decoded chunks
-      async function* streamGenerator() {
+      async function* sseGenerator() {
         const decoder = new TextDecoder();
+        let buffer = '';
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          yield { text: () => chunk };
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const raw = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 2);
+            const lines = raw.split(/\n/);
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const obj = JSON.parse(data);
+                if (obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta') {
+                  yield { text: () => String(obj.delta.text) };
+                }
+              } catch {
+                // skip unparseable lines
+              }
+            }
+          }
         }
       }
 
-      return { stream: streamGenerator() };
+      return { stream: sseGenerator() };
     } catch (err) {
       lastError = err;
     }
@@ -201,20 +175,20 @@ async function generateModelStream(prompt: string | string[]) {
 
 async function generateAnthropicText(prompt: string | string[]) {
   if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
-  const model = process.env.ANTHROPIC_MODEL || 'claude-2.1';
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022';
+  const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
   const body = {
     model,
-    input: Array.isArray(prompt) ? prompt.join('\n') : String(prompt),
+    messages: [{ role: 'user', content: promptText }],
     max_tokens: 512,
-    temperature: 0.2,
-    stream: false,
   };
 
   const res = await fetch(ANTHROPIC_BASE_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': ANTHROPIC_API_KEY,
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
   });
@@ -225,15 +199,14 @@ async function generateAnthropicText(prompt: string | string[]) {
   }
 
   const json = await res.json();
-  // Anthropic responses may put text in 'completion' or 'output' depending on API; try common keys.
-  const text = json?.completion ?? json?.output?.[0]?.content ?? json?.output?.content ?? json?.text ?? null;
+  const text = json?.content?.[0]?.text ?? null;
   return typeof text === 'string' ? text : JSON.stringify(json);
 }
 
 async function generateModelText(prompt: string | string[]) {
   if (ANTHROPIC_API_KEY) return await generateAnthropicText(prompt);
   if (GEMINI_API_KEY && genAI) {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const result = await model.generateContent(Array.isArray(prompt) ? prompt : String(prompt));
     return result.response?.text?.()?.trim?.() ?? '';
   }
