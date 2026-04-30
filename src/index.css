@@ -66,6 +66,39 @@
   }
 }
 
+@keyframes session-fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes session-content-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-pop {
+  0%, 100% { transform: scale(1); }
+  40%       { transform: scale(1.7); }
+}
+
+@keyframes shimmer-line {
+  0%   { width: 0; opacity: 0; }
+  30%  { opacity: 1; }
+  100% { width: 100%; opacity: 0.4; }
+}
+
+.session-transition-overlay {
+  animation: session-fade-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.session-transition-content {
+  animation: session-content-up 0.55s 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.session-dot-pop {
+  animation: dot-pop 0.5s ease-out both;
+}
+
 @layer components {
   /* /caveman: primary amber cta */
   .btn-primary {

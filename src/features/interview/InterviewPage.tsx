@@ -49,6 +49,12 @@ export default function InterviewPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [experienceTranscript, setExperienceTranscript] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionTransition, setSessionTransition] = useState<{
+    fromSession: number;
+    nextSessionId: string | null;
+    nextFocus: string | null;
+    isFinal: boolean;
+  } | null>(null);
 
   // init session from DB.
   useEffect(() => {
@@ -113,6 +119,20 @@ export default function InterviewPage() {
     };
   }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
 
+  useEffect(() => {
+    if (!sessionTransition) return;
+    const delay = sessionTransition.isFinal ? 3800 : 3200;
+    const timer = setTimeout(() => {
+      if (sessionTransition.nextSessionId) {
+        navigate(`/interview/${sessionTransition.nextSessionId}`);
+      } else {
+        navigate(ROUTES.DASHBOARD);
+      }
+      setSessionTransition(null);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [sessionTransition, navigate]);
+
   const currentSessionNumber = sessionData?.session_number ?? null;
   const sessionList = Array.isArray(sessions) ? sessions : [];
   const totalSessions = sessionList.length || 6;
@@ -155,13 +175,12 @@ export default function InterviewPage() {
     if (isFinalQuestionInSession) {
       const nextSession = sessionList.find((session) => session.session_number === sessionData.session_number + 1);
       resetQuestionFlow();
-
-      if (nextSession?.id) {
-        navigate(`/interview/${nextSession.id}`);
-      } else {
-        navigate(ROUTES.DASHBOARD);
-      }
-
+      setSessionTransition({
+        fromSession: sessionData.session_number,
+        nextSessionId: nextSession?.id ?? null,
+        nextFocus: nextSession?.session_focus ?? null,
+        isFinal: !nextSession,
+      });
       return;
     }
 
@@ -198,9 +217,19 @@ export default function InterviewPage() {
     }
   };
 
+  const focusCompletionMessages: Record<string, string> = {
+    orientation:   'The foundation is set.',
+    processes:     'The workflows are captured.',
+    decisions:     'The decisions are mapped.',
+    relationships: 'The network is charted.',
+    edge_cases:    'The edge cases are preserved.',
+    review:        'The legacy is complete.',
+  };
+
   if (isLoading) return <div className="min-h-screen bg-cream flex items-center justify-center font-serif text-2xl">Preparing legacy session...</div>;
 
   return (
+    <>
     <div className="min-h-screen bg-cream flex">
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-cream-dark p-6 hidden md:block">
@@ -360,5 +389,59 @@ export default function InterviewPage() {
         </main>
       </div>
     </div>
+
+    {sessionTransition && (
+      <div className="session-transition-overlay fixed inset-0 z-50 bg-green-deep flex items-center justify-center">
+        <div className="session-transition-content text-center px-8 max-w-lg w-full">
+          {sessionTransition.isFinal ? (
+            <>
+              <div className="text-amber font-serif text-6xl mb-6 select-none">✦</div>
+              <p className="label-caps text-green-pale/60 mb-6">All Sessions Complete</p>
+              <div className="flex gap-3 justify-center mb-10">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="session-dot-pop w-3 h-3 rounded-full bg-amber"
+                    style={{ animationDelay: `${i * 0.08}s` }}
+                  />
+                ))}
+              </div>
+              <h1 className="font-serif text-6xl text-cream mb-4">Legacy Complete.</h1>
+              <p className="text-green-pale/70 text-lg leading-relaxed">
+                Your knowledge has been preserved<br />for those who follow.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="label-caps text-green-pale/60 mb-6">
+                Session {sessionTransition.fromSession} Complete
+              </p>
+              <div className="flex gap-3 justify-center mb-10">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-3 rounded-full ${
+                      i < sessionTransition.fromSession
+                        ? 'session-dot-pop bg-amber'
+                        : 'bg-green-mid/40'
+                    }`}
+                    style={i < sessionTransition.fromSession ? { animationDelay: `${i * 0.08}s` } : {}}
+                  />
+                ))}
+              </div>
+              <h1 className="font-serif text-5xl text-cream mb-4 leading-tight">
+                {focusCompletionMessages[sessionData?.session_focus] ?? 'Well done.'}
+              </h1>
+              {sessionTransition.nextFocus && (
+                <p className="text-amber text-xl italic mt-3 capitalize">
+                  Next: {sessionTransition.nextFocus.replace('_', ' ')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
