@@ -14,7 +14,18 @@ export async function* streamInterviewResponse(sessionId: string, userResponse: 
     body: JSON.stringify({ sessionId, userResponse }),
   });
 
-  if (!response.ok) throw new Error('AI stream failed');
+  if (!response.ok) {
+    let errorMessage = 'AI stream failed';
+    try {
+      const payload = await response.json();
+      if (payload && typeof payload.message === 'string' && payload.message.trim()) {
+        errorMessage = payload.message;
+      }
+    } catch {
+      // ignore json parse errors and use fallback message.
+    }
+    throw new Error(errorMessage);
+  }
 
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();

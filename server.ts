@@ -11,6 +11,8 @@ const DIST_PATH = join(process.cwd(), "dist");
 const jwtSecret = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL || "";
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/messages';
 
 if (!jwtSecret) {
   throw new Error("JWT_SECRET is required");
@@ -313,7 +315,7 @@ async function generateGeminiStream(prompt: string | string[]) {
     throw new Error('AI configuration missing');
   }
 
-  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -326,6 +328,174 @@ async function generateGeminiStream(prompt: string | string[]) {
   }
 
   throw lastError instanceof Error ? lastError : new Error('Failed to generate Gemini response');
+}
+
+async function generateAnthropicStream(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+
+  const models = [process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
+      const body = {
+        model: modelName,
+        messages: [{ role: 'user', content: promptText }],
+        max_tokens: 1024,
+        stream: true,
+      };
+
+      const res = await fetch(ANTHROPIC_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let bodyText = '';
+        try {
+          const json = await res.json();
+          bodyText = JSON.stringify(json);
+        } catch {
+          bodyText = await res.text().catch(() => '');
+        }
+        console.error('[anthropic] non-ok response', res.status, bodyText);
+        throw new Error(`Anthropic error ${res.status}: ${bodyText}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No stream from Anthropic');
+
+      async function* sseGenerator() {
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const raw = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 2);
+            const lines = raw.split(/\n/);
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const obj = JSON.parse(data);
+                if (obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta') {
+                  yield { text: () => String(obj.delta.text) };
+                }
+              } catch {
+                // skip unparseable lines
+              }
+            }
+          }
+        }
+      }
+
+      return { stream: sseGenerator() };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Anthropic generation failed');
+}
+
+async function generateModelStream(prompt: string | string[]) {
+  // Priority: Anthropic (if configured) -> Gemini (if configured)
+  if (ANTHROPIC_API_KEY) return await generateAnthropicStream(prompt);
+  if (GEMINI_API_KEY && genAI) return await generateGeminiStream(prompt);
+  throw new Error('No AI provider configured');
+}
+
+async function generateAnthropicText(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022';
+  const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
+  const body = {
+    model,
+    messages: [{ role: 'user', content: promptText }],
+    max_tokens: 512,
+  };
+
+  const res = await fetch(ANTHROPIC_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Anthropic error ${res.status}: ${txt}`);
+  }
+
+  const json = await res.json();
+  const text = json?.content?.[0]?.text ?? null;
+  return typeof text === 'string' ? text : JSON.stringify(json);
+}
+
+async function generateModelText(prompt: string | string[]) {
+  if (ANTHROPIC_API_KEY) return await generateAnthropicText(prompt);
+  if (GEMINI_API_KEY && genAI) {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(Array.isArray(prompt) ? prompt : String(prompt));
+    return result.response?.text?.()?.trim?.() ?? '';
+  }
+  throw new Error('No AI provider configured');
+}
+
+function parseGeminiError(error: unknown) {
+  const fallbackMessage = 'AI is temporarily unavailable. Please try again shortly.';
+  const rawMessage = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : fallbackMessage;
+
+  const message = rawMessage || fallbackMessage;
+  const lower = message.toLowerCase();
+  const isQuotaOrRateLimit =
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit');
+
+  let retryAfterSeconds: number | null = null;
+  const retryMatch = message.match(/retry(?:\s+in)?\s+([\d.]+)s/i) || message.match(/"retryDelay":"(\d+)s"/i);
+  if (retryMatch) {
+    const parsed = Number(retryMatch[1]);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      retryAfterSeconds = Math.ceil(parsed);
+    }
+  }
+
+  if (isQuotaOrRateLimit) {
+    return {
+      status: 429,
+      message: 'Gemini rate limit reached for this project. Please retry shortly or add billing/quota for the configured API key.',
+      retryAfterSeconds,
+      rawMessage: message,
+    };
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+    retryAfterSeconds,
+    rawMessage: message,
+  };
 }
 
 const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
@@ -454,10 +624,8 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
   let cleanedTitle = '';
 
   try {
-    if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const result = await model.generateContent(prompt);
-      const generatedText = result.response.text().trim();
+    const generatedText = await generateModelText(prompt);
+    if (generatedText) {
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
         .replace(/^['"`]|['"`]$/g, '')
@@ -642,7 +810,12 @@ Bun.serve({
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 
@@ -979,6 +1152,25 @@ Bun.serve({
         }
       }
 
+      // mark session complete
+      if (/^\/api\/interview\/session\/[^/]+\/complete$/.test(url.pathname) && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+        const parts = url.pathname.split('/');
+        const sessionId = parts[4];
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+        try {
+          await sql`
+            UPDATE interview_sessions SET status = 'complete'
+            WHERE id = ${sessionId} AND retiree_id = ${decoded.sub}
+          `;
+          return new Response(JSON.stringify({ ok: true }), { status: 200, headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
       // gemini stream proxy
       if (url.pathname === "/api/interview/stream" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
@@ -1042,7 +1234,7 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const result = await generateGeminiStream([prompt, userResponse]);
+          const result = await generateModelStream([prompt, userResponse]);
 
           const stream = new ReadableStream({
             async start(controller) {
@@ -1289,9 +1481,9 @@ Bun.serve({
               )
             : '';
 
-          const prompt = `You are ExitWise AI, a knowledge access assistant helping a successor employee learn from a retiring colleague's captured institutional knowledge.
+          const isGreeting = /^(hi|hello|hey|howdy|greetings|sup|yo|good morning|good afternoon|good evening)[\s!?.]*$/i.test(safeMessage.trim());
 
-RETIREE: ${engagement.retiree_name} | Role: ${engagement.job_title || 'Expert'} | Org: ${engagement.org_name} | ${engagement.years_exp || '?'} years exp
+          const prompt = `You are the captured voice of ${engagement.retiree_name}, a ${engagement.job_title || 'expert'} with ${engagement.years_exp || 'many'} years at ${engagement.org_name}. You speak from their recorded knowledge to help their successor.
 
 CAPTURED KNOWLEDGE PROFILES:
 ${profileContext}
@@ -1299,15 +1491,18 @@ ${profileContext}
 INTERVIEW TRANSCRIPT:
 ${exchangeContext}
 
-${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}INSTRUCTIONS:
-- Answer ONLY using the captured knowledge above
-- If information is not captured, say: "This wasn't captured in the knowledge transfer sessions."
-- Be specific and practical for the successor
-- Output plain text only. No HTML, markdown, or formatting symbols.
+${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}TONE AND STYLE RULES:
+- Sound like a knowledgeable colleague having a real conversation, not a report generator
+- Keep answers short and direct — 2 to 4 sentences for simple questions
+- For multi-part answers, use 3 to 5 short bullet points max, no long numbered lists
+- Refer to yourself as drawing from ${engagement.retiree_name}'s experience: "From what I know...", "In my experience here...", "What worked for me was..."
+- If a greeting (Hi, Hello, Hey, etc.): respond warmly, say who you are, and naturally mention 2 to 3 areas you can help with based on the captured knowledge
+- If info wasn't captured, say: "I don't think we covered that in our sessions — try asking your manager or team."
+- Plain text only. No markdown, no symbols, no numbered lists with periods.
 
-Successor's question: ${safeMessage}`;
+Successor's message: ${safeMessage}${isGreeting ? '\n\n(This is a greeting — introduce yourself warmly and offer help areas based on the knowledge above. Keep it brief, 3 to 4 sentences max.)' : ''}`;
 
-          const result = await generateGeminiStream(prompt);
+          const result = await generateModelStream(prompt);
 
           const stream = new ReadableStream({
             async start(controller) {
@@ -1324,8 +1519,12 @@ Successor's question: ${safeMessage}`;
           return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
           console.error('[successor/stream]', e);
-          const message = typeof e?.message === 'string' && e.message ? e.message : 'AI stream failed';
-          return new Response(JSON.stringify({ message }), { status: 500, headers: apiHeaders });
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 

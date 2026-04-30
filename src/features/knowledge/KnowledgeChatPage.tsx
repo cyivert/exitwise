@@ -246,10 +246,28 @@ export default function KnowledgeChatPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
                 {messages.length === 0 && !isStreaming && (
-                  <div className="text-center py-10">
-                    <p className="text-text-light text-sm">
-                      Ask anything about {selectedEngagement?.retiree_name}'s institutional knowledge.
+                  <div className="flex flex-col items-center py-10 px-4 gap-5">
+                    <p className="text-text-light text-sm text-center">
+                      Ask anything about {selectedEngagement?.retiree_name}'s experience, or start with a suggestion:
                     </p>
+                    <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                      {[
+                        `What were ${selectedEngagement?.retiree_name?.split(' ')[0]}'s key day-to-day processes?`,
+                        'How did they approach tough decisions?',
+                        'What relationships should I prioritize?',
+                        'What mistakes should I avoid?',
+                        'What advice would they give me starting out?',
+                        'What edge cases caught them off guard?',
+                      ].map(suggestion => (
+                        <button
+                          key={suggestion}
+                          onClick={() => setInput(suggestion)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-cream-dark bg-white text-text-mid hover:border-amber hover:text-amber transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
