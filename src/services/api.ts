@@ -54,6 +54,9 @@ export const interviewService = {
     method: 'POST',
     body: JSON.stringify(exchange),
   }),
+  completeSession: (sessionId: string) => apiFetch<any>(`/interview/session/${sessionId}/complete`, {
+    method: 'POST',
+  }),
 };
 
 export const dashboardService = {

@@ -9,15 +9,8 @@ import type { QuestionType } from '../../types';
 import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
 import UserMenu from '../../components/shared/UserMenu';
 
-function groupSessionExchanges(exchanges: any[]) {
-  return exchanges.reduce<Record<number, any[]>>((groups, exchange) => {
-    const sessionNumber = Number(exchange.session_number || 0);
-    if (!groups[sessionNumber]) {
-      groups[sessionNumber] = [];
-    }
-    groups[sessionNumber].push(exchange);
-    return groups;
-  }, {});
+function formatFocus(focus: string) {
+  return focus.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 export default function InterviewPage() {
@@ -49,6 +42,13 @@ export default function InterviewPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [experienceTranscript, setExperienceTranscript] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionTransition, setSessionTransition] = useState<{
+    fromSession: number;
+    nextSessionId: string | null;
+    nextFocus: string | null;
+    isFinal: boolean;
+  } | null>(null);
+  const [transitionFadingOut, setTransitionFadingOut] = useState(false);
 
   // init session from DB.
   useEffect(() => {
@@ -113,15 +113,36 @@ export default function InterviewPage() {
     };
   }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
 
+  useEffect(() => {
+    if (!sessionTransition) return;
+    setTransitionFadingOut(false);
+    const displayDuration = sessionTransition.isFinal ? 3200 : 2600;
+    const fadeTimer = setTimeout(() => setTransitionFadingOut(true), displayDuration);
+    const navTimer = setTimeout(() => {
+      if (sessionTransition.nextSessionId) {
+        navigate(`/interview/${sessionTransition.nextSessionId}`);
+      } else {
+        navigate(ROUTES.DASHBOARD);
+      }
+      setSessionTransition(null);
+      setTransitionFadingOut(false);
+    }, displayDuration + 650);
+    return () => { clearTimeout(fadeTimer); clearTimeout(navTimer); };
+  }, [sessionTransition, navigate]);
+
   const currentSessionNumber = sessionData?.session_number ?? null;
   const sessionList = Array.isArray(sessions) ? sessions : [];
   const totalSessions = sessionList.length || 6;
   const remainingSessions = currentSessionNumber
     ? sessionList.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
     : 0;
+  const isSessionComplete = sessionData?.status === 'complete';
+  const allComplete = sessionList.length > 0 && sessionList.every(s => s.status === 'complete');
   const displayedQuestion = normalizeInterviewText(currentQuestion);
   const savedExperienceExchanges = Array.isArray(experienceTranscript) ? experienceTranscript : [];
-  const groupedExperienceExchanges = groupSessionExchanges(savedExperienceExchanges);
+  const currentSessionExchanges = currentSessionNumber
+    ? savedExperienceExchanges.filter((exchange) => Number(exchange.session_number || exchange.sequence_order || 0) === currentSessionNumber)
+    : [];
 
   const handleContinue = async () => {
     if (!draftResponse || isStreaming || !sessionData) return;
@@ -155,13 +176,14 @@ export default function InterviewPage() {
     if (isFinalQuestionInSession) {
       const nextSession = sessionList.find((session) => session.session_number === sessionData.session_number + 1);
       resetQuestionFlow();
-
-      if (nextSession?.id) {
-        navigate(`/interview/${nextSession.id}`);
-      } else {
-        navigate(ROUTES.DASHBOARD);
-      }
-
+      await interviewService.completeSession(sessionId!);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'complete' } : s));
+      setSessionTransition({
+        fromSession: sessionData.session_number,
+        nextSessionId: nextSession?.id ?? null,
+        nextFocus: nextSession?.session_focus ?? null,
+        isFinal: !nextSession,
+      });
       return;
     }
 
@@ -198,9 +220,19 @@ export default function InterviewPage() {
     }
   };
 
+  const focusCompletionMessages: Record<string, string> = {
+    orientation:   'The foundation is set.',
+    processes:     'The workflows are captured.',
+    decisions:     'The decisions are mapped.',
+    relationships: 'The network is charted.',
+    edge_cases:    'The edge cases are preserved.',
+    review:        'The legacy is complete.',
+  };
+
   if (isLoading) return <div className="min-h-screen bg-cream flex items-center justify-center font-serif text-2xl">Preparing legacy session...</div>;
 
   return (
+    <>
     <div className="min-h-screen bg-cream flex">
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-cream-dark p-6 hidden md:block">
@@ -222,18 +254,37 @@ export default function InterviewPage() {
           </p>
         </div>
 
-        <nav className="space-y-4">
+        <nav className="space-y-1">
           {sessionList.map((session) => {
-            const isCurrentSession = session.id === sessionId;
+            const isCurrent = session.id === sessionId;
             const isComplete = session.status === 'complete';
+            const isActive = session.status === 'active';
+            const isClickable = !isCurrent && (isComplete || isActive);
 
-            return (
-              <div key={session.id} className="flex items-center space-x-3">
-                <div className={`w-2 h-2 rounded-full ${isComplete ? 'bg-green-light' : isCurrentSession ? 'bg-amber' : 'bg-cream-dark'}`} />
-                <span className={`text-sm ${isCurrentSession ? 'font-medium text-text-dark' : 'text-text-mid'}`}>
-                  Session {session.session_number}: {session.session_focus}
-                </span>
+            const badge = isComplete
+              ? <span className="text-[9px] font-bold uppercase tracking-widest text-green-light bg-green-deep/20 px-1.5 py-0.5 rounded">Completed</span>
+              : isActive
+                ? <span className="text-[9px] font-bold uppercase tracking-widest text-amber bg-amber/10 px-1.5 py-0.5 rounded">Continue</span>
+                : <span className="text-[9px] font-bold uppercase tracking-widest text-text-light bg-cream-dark px-1.5 py-0.5 rounded">Pending</span>;
+
+            const inner = (
+              <div className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-lg transition-colors ${isCurrent ? 'bg-amber/10 border border-amber/30' : isComplete ? 'hover:bg-green-pale/40' : isActive ? 'border border-amber/20 bg-amber/5 hover:bg-amber/10' : 'opacity-60'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-sm font-medium ${isCurrent ? 'text-text-dark' : isComplete || isActive ? 'text-text-mid' : 'text-text-light'}`}>
+                    Session {session.session_number}
+                  </span>
+                  {badge}
+                </div>
+                <span className="text-xs text-text-light">{formatFocus(session.session_focus)}</span>
               </div>
+            );
+
+            return isClickable ? (
+              <button key={session.id} className="w-full text-left cursor-pointer" onClick={() => navigate(`/interview/${session.id}`)}>
+                {inner}
+              </button>
+            ) : (
+              <div key={session.id}>{inner}</div>
             );
           })}
         </nav>
@@ -255,12 +306,26 @@ export default function InterviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
+            <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus ? formatFocus(sessionFocus) : ''}</div>
             <UserMenu />
           </div>
         </header>
 
         <main className="grow p-12 max-w-3xl mx-auto w-full">
+          {isSessionComplete ? (
+            <div className="mb-8 rounded-lg border border-green-pale bg-green-pale/30 px-6 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="label-caps text-green-mid mb-0.5">Session Complete</p>
+                <p className="text-sm text-text-mid">{allComplete ? 'All sessions recorded — knowledge is locked.' : 'This session is done. Browse the transcript below.'}</p>
+              </div>
+              {!allComplete && (
+                <button onClick={() => navigate(ROUTES.DASHBOARD)} className="text-xs px-3 py-1.5 rounded border border-green-mid text-green-mid hover:bg-green-pale transition-colors shrink-0">
+                  Back to Dashboard
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="mb-12">
             <span className="label-caps text-amber block mb-4">Current Focus</span>
             <h2 className="text-4xl leading-tight mb-6 font-serif">
@@ -276,9 +341,9 @@ export default function InterviewPage() {
               className="w-full h-48 p-6 bg-white border border-cream-dark rounded-lg focus:ring-1 focus:ring-green-mid outline-none resize-none text-lg shadow-inner font-serif"
               disabled={isStreaming}
             />
-            
+
             <div className="flex justify-between items-center gap-3 flex-wrap">
-              <button 
+              <button
                 onClick={() => navigate(ROUTES.DASHBOARD)}
                 className="text-text-light hover:text-text-dark transition-colors"
               >
@@ -306,59 +371,104 @@ export default function InterviewPage() {
               </div>
             </div>
           </div>
+            </>
+          )}
 
           <div className="mt-12 p-8 bg-green-pale/20 border border-green-pale rounded-lg">
-            <span className="label-caps text-green-mid block mb-4">Saved Answers This Experience</span>
-            {savedExperienceExchanges.length > 0 ? (
-              <div className="space-y-5 max-h-96 overflow-y-auto pr-2">
-                {Array.from({ length: 6 }, (_, index) => index + 1).map((sessionNumber) => {
-                  const sessionExchanges = groupedExperienceExchanges[sessionNumber] || [];
-                  return (
-                    <section key={sessionNumber} className="rounded-lg border border-green-pale bg-white/70 p-4">
-                      <div className="flex items-center justify-between gap-4 mb-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-text-light">Session {sessionNumber}</p>
-                          <p className="font-serif text-lg text-text-dark">Saved transcript</p>
-                        </div>
-                        <span className="text-xs text-text-light uppercase tracking-[0.18em]">
-                          {sessionExchanges.length} turns
-                        </span>
-                      </div>
+            <span className="label-caps text-green-mid block mb-4">Saved Answers This Session</span>
+            {currentSessionNumber && currentSessionExchanges.length > 0 ? (
+              <section className="rounded-lg border border-green-pale bg-white/70 p-4">
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-text-light">Session {currentSessionNumber}</p>
+                    <p className="font-serif text-lg text-text-dark">Saved transcript</p>
+                  </div>
+                  <span className="text-xs text-text-light uppercase tracking-[0.18em]">
+                    {currentSessionExchanges.length} turns
+                  </span>
+                </div>
 
-                      {sessionExchanges.length > 0 ? (
-                        <div className="space-y-3">
-                          {sessionExchanges.map((exchange) => (
-                            <article key={exchange.id} className="rounded-md border border-green-pale/70 bg-white p-4">
-                              <p className="text-xs uppercase tracking-[0.2em] text-text-light mb-2">
-                                {sessionNumber}.{exchange.sequence_order || 1} {exchange.session_focus ? `• ${exchange.session_focus}` : ''}
-                              </p>
-                              <p className="text-sm font-medium text-text-dark mb-2">
-                                Q: {normalizeInterviewText(exchange.question_text)}
-                              </p>
-                              <p className="text-lg font-serif italic text-text-dark leading-relaxed">
-                                A: {normalizeInterviewText(exchange.response_text || 'No answer saved yet.')}
-                              </p>
-                              {exchange.ai_follow_up && (
-                                <p className="mt-3 text-sm text-text-mid border-t border-green-pale pt-3">
-                                  Follow-up: {normalizeInterviewText(exchange.ai_follow_up)}
-                                </p>
-                              )}
-                            </article>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-text-mid">No saved answers yet for this session.</p>
+                <div className="space-y-3">
+                  {currentSessionExchanges.map((exchange) => (
+                    <article key={exchange.id} className="rounded-md border border-green-pale/70 bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-text-light mb-2">
+                        {currentSessionNumber}.{exchange.sequence_order || 1} {exchange.session_focus ? `• ${exchange.session_focus}` : ''}
+                      </p>
+                      <p className="text-sm font-medium text-text-dark mb-2">
+                        Q: {normalizeInterviewText(exchange.question_text)}
+                      </p>
+                      <p className="text-lg font-serif italic text-text-dark leading-relaxed">
+                        A: {normalizeInterviewText(exchange.response_text || 'No answer saved yet.')}
+                      </p>
+                      {exchange.ai_follow_up && (
+                        <p className="mt-3 text-sm text-text-mid border-t border-green-pale pt-3">
+                          Follow-up: {normalizeInterviewText(exchange.ai_follow_up)}
+                        </p>
                       )}
-                    </section>
-                  );
-                })}
-              </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             ) : (
-              <p className="text-text-mid">No saved answers yet for this experience.</p>
+              <p className="text-text-mid">No saved answers yet for this session.</p>
             )}
           </div>
         </main>
       </div>
     </div>
+
+    {sessionTransition && (
+      <div className={`session-transition-overlay fixed inset-0 z-50 bg-green-deep flex items-center justify-center${transitionFadingOut ? ' fading-out' : ''}`}>
+        <div className="session-transition-content text-center px-8 max-w-lg w-full">
+          {sessionTransition.isFinal ? (
+            <>
+              <div className="text-amber font-serif text-6xl mb-6 select-none">✦</div>
+              <p className="label-caps text-green-pale/60 mb-6">All Sessions Complete</p>
+              <div className="flex gap-3 justify-center mb-10">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="session-dot-pop w-3 h-3 rounded-full bg-amber"
+                    style={{ animationDelay: `${i * 0.08}s` }}
+                  />
+                ))}
+              </div>
+              <h1 className="font-serif text-6xl text-cream mb-4">Legacy Complete.</h1>
+              <p className="text-green-pale/70 text-lg leading-relaxed">
+                Your knowledge has been preserved<br />for those who follow.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="label-caps text-green-pale/60 mb-6">
+                Session {sessionTransition.fromSession} Complete
+              </p>
+              <div className="flex gap-3 justify-center mb-10">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-3 h-3 rounded-full ${
+                      i < sessionTransition.fromSession
+                        ? 'session-dot-pop bg-amber'
+                        : 'bg-green-mid/40'
+                    }`}
+                    style={i < sessionTransition.fromSession ? { animationDelay: `${i * 0.08}s` } : {}}
+                  />
+                ))}
+              </div>
+              <h1 className="font-serif text-5xl text-cream mb-4 leading-tight">
+                {focusCompletionMessages[sessionData?.session_focus] ?? 'Well done.'}
+              </h1>
+              {sessionTransition.nextFocus && (
+                <p className="text-amber text-xl italic mt-3 capitalize">
+                  Next: {sessionTransition.nextFocus.replace('_', ' ')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
