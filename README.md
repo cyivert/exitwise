@@ -15,7 +15,7 @@ Knowledge transfer platform. Captures tacit expertise from retiring employees th
 | Frontend | React 19, TypeScript, Tailwind CSS v4, Framer Motion |
 | Backend | Bun, custom HTTP server (`server.ts`) |
 | Database | PostgreSQL (via `postgres` driver) |
-| AI | Google Gemini (sessions), Anthropic Claude (successor chat) |
+| AI | Google Gemini API
 | Auth | JWT |
 | State | Zustand |
 | Routing | React Router v7 |

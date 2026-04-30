@@ -18,10 +18,12 @@ if (!jwtSecret) {
   throw new Error("JWT_SECRET is required");
 }
 
+// 
 const JWT_SECRET: string = jwtSecret;
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const useDemoApi = DATABASE_URL.includes(".railway.internal") && !process.env.RAILWAY_ENVIRONMENT;
 
+// demo API with in-memory data. no persistence, for local dev without env vars or quick testing.
 type DemoUser = {
   id: string;
   org_id: string;
@@ -34,6 +36,7 @@ type DemoUser = {
   created_at: string;
 };
 
+// API handlers. For demo API, these run before static file serving. For real API, these run in separate Bun workers (see bun-workers/).
 type ExchangePayload = {
   id: string;
   session_id: string;
@@ -44,6 +47,7 @@ type ExchangePayload = {
   sequence_order?: number;
 };
 
+// These types are duplicated from src/types/index.ts to avoid importing from src/ in the server context. Keep in sync.
 type OrgMemberPayload = {
   full_name: string;
   email: string;
@@ -53,28 +57,33 @@ type OrgMemberPayload = {
   years_exp?: number | null;
 };
 
+// For release date update, we allow optional experienceId (engagementId) to be passed for context, but it's not strictly required since the server can look up the active experience for the engagement if needed.
 type ReleaseDatePayload = {
   release_date: string;
   engagement_id?: string;
 };
 
+// These types are for the interview and successor chat streaming endpoints, which have a different shape than the standard REST endpoints.
 type InterviewStreamPayload = {
   sessionId: string;
   userResponse: string;
 };
 
+// Successor chat streaming payload, which includes chatId, engagementId, and the new message from the successor.
 type SuccessorChatMessagePayload = {
   chat_id: string;
   role: string;
   content: string;
 };
 
+// Legacy type for successor stream which can be used if the above more specific type is not suitable. It includes chatId, engagementId, and message, but does
 type SuccessorStreamPayload = {
   chatId: string;
   engagementId: string;
   message: string;
 };
 
+// / Note: The above types are only used in the server handlers and are not shared with the client code to avoid importing from src/ in the server context. They should be kept in sync with the actual request payloads expected by the handlers.
 const demoOrg = {
   id: "demo-org",
   name: "Local Demo Organization",
@@ -82,11 +91,13 @@ const demoOrg = {
   invite_code: "DEMO2026",
 };
 
+// In-memory stores for demo API. These are Maps keyed by unique identifiers to allow easy lookup and mutation.
 const demoUsers = new Map<string, DemoUser>();
 const demoExperiences = new Map<string, any>();
 const demoSessions = new Map<string, any>();
 const demoExchanges = new Map<string, any[]>();
 
+// / Helper functions for the server handlers, including token verification, response formatting, and error parsing.
 function safeJson(data: unknown, headers: Headers, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -94,6 +105,7 @@ function safeJson(data: unknown, headers: Headers, init: ResponseInit = {}) {
   });
 }
 
+// Convert a DemoUser to a safe user object that can be sent to the client, excluding sensitive information like password_hash.
 function toSafeUser(user: DemoUser) {
   return {
     id: user.id,
@@ -107,6 +119,8 @@ function toSafeUser(user: DemoUser) {
   };
 }
 
+// Create a demo experience for a retiree user if one doesn't already exist. 
+// This is used in the demo API handlers to ensure that retiree users have an experience to interact with.
 function makeDemoExperience(user: DemoUser) {
   const existing = [...demoExperiences.values()].find((experience) => experience.retiree_id === user.id);
   if (existing) return existing;
@@ -145,6 +159,10 @@ function makeDemoExperience(user: DemoUser) {
   return engagement;
 }
 
+// This function checks the request URL and method, verifies authentication if needed, 
+// and performs the appropriate actions on the in-memory data stores to simulate the API behavior. It returns a Response 
+// object if it handles the request, or null if it doesn't match any demo API route (in which case the request will be 
+// handled by the static file server or real API handlers).
 async function handleDemoApi(req: Request, url: URL, headers: Headers) {
   if (!useDemoApi) return null;
 
