@@ -1,88 +1,66 @@
-# React + TypeScript + Vite
+# ExitWise
 
-## Local Development
+Knowledge transfer platform. Captures tacit expertise from retiring employees through AI-guided sessions and makes it accessible to successors.
 
-Run the API server and Vite dev server together:
+## What it does
 
-```sh
+- **Retirees** complete 6 structured AI sessions to capture institutional knowledge
+- **Successors** query that knowledge via an AI chat interface
+- **Organization admins** manage members, assignments, and knowledge releases
+
+## Tech stack
+
+| Layer | Tech |
+|-------|------|
+| Frontend | React 19, TypeScript, Tailwind CSS v4, Framer Motion |
+| Backend | Bun, custom HTTP server (`server.ts`) |
+| Database | PostgreSQL (via `postgres` driver) |
+| AI | Google Gemini (sessions), Anthropic Claude (successor chat) |
+| Auth | JWT |
+| State | Zustand |
+| Routing | React Router v7 |
+
+## Getting started
+
+**Prerequisites:** Bun, PostgreSQL
+
+```bash
+# Install dependencies
+bun install
+
+# Set environment variables
+cp .env.example .env
+# Fill in: DATABASE_URL, JWT_SECRET, GEMINI_API_KEY, ANTHROPIC_API_KEY
+
+# Start dev server (frontend + backend)
 bun run dev
 ```
 
-Vite proxies `/api/*` requests to `http://localhost:8080`, where `server.ts`
-serves the backend routes.
+Frontend: `http://localhost:5173` — API: `http://localhost:8080`
 
-Open the frontend at `http://localhost:5173`. The API runs at
-`http://localhost:8080`. If either port is already in use, `bun run dev` exits
-with the occupied port instead of silently moving Vite to a different localhost.
+Vite proxies `/api/*` to the backend. If either port is occupied, dev exits with the conflict instead of silently rebinding.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Environment variables
 
-Currently, two official plugins are available:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | Secret for signing JWTs |
+| `GEMINI_API_KEY` | Yes | Google Gemini (knowledge capture sessions) |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic Claude (successor chat) |
+| `PORT` | No | API server port (default: 8080) |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Build
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun run build   # TypeScript check + Vite bundle → dist/
+bun run start   # Serve production build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## User roles
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| Role | Access |
+|------|--------|
+| `organization_admin` | Manage org, members, assign retirees to successors, release profiles |
+| `retiree` | Complete AI-guided knowledge capture sessions |
+| `successor` | Chat with released knowledge profiles |
