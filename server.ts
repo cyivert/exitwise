@@ -72,7 +72,7 @@ async function generateGeminiStream(prompt: string | string[]) {
     throw new Error('AI configuration missing');
   }
 
-  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -206,7 +206,7 @@ async function generateAnthropicText(prompt: string | string[]) {
 async function generateModelText(prompt: string | string[]) {
   if (ANTHROPIC_API_KEY) return await generateAnthropicText(prompt);
   if (GEMINI_API_KEY && genAI) {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(Array.isArray(prompt) ? prompt : String(prompt));
     return result.response?.text?.()?.trim?.() ?? '';
   }
