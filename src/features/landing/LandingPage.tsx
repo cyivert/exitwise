@@ -52,11 +52,6 @@ export default function LandingPage() {
                   Preserve Your Legacy
                 </Button>
               </Link>
-              <a href="#about">
-                <Button variant="neutral" size="lg" className="text-lg px-10 h-14">
-                  About
-                </Button>
-              </a>
             </div>
           </motion.div>
         </section>
@@ -197,9 +192,6 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="text-xl font-serif mb-8 md:mb-0">
             Exit<span className="text-amber italic">Wise</span>
-          </div>
-          <div className="flex space-x-8 text-sm text-text-light uppercase tracking-widest">
-            <a href="#about" className="hover:text-amber transition-colors">About</a>
           </div>
         </div>
       </footer>
