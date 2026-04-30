@@ -76,6 +76,24 @@ export interface KnowledgeProfile {
   created_at: string;
 }
 
+export interface SuccessorChat {
+  id: string;
+  engagement_id: string;
+  successor_id: string;
+  status: 'active' | 'confirmed';
+  confirmed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuccessorChatMessage {
+  id: string;
+  chat_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 export interface ApiResponse<T> {
   data?: T;
   error?: string;

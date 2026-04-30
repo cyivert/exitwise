@@ -24,6 +24,8 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   INTERVIEW: '/interview/:sessionId',
   PROFILE: '/profile/:engagementId',
+  KNOWLEDGE: '/knowledge',
+  KNOWLEDGE_CHAT: '/knowledge/:engagementId',
 };
 
 export const COLORS = {

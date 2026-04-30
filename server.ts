@@ -247,6 +247,37 @@ function normalizeContextText(text: string) {
     .trim();
 }
 
+function limitText(text: string, maxChars: number) {
+  if (!text) return '';
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+function asSafeText(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return normalizeContextText(value);
+}
+
+async function generateGeminiStream(prompt: string | string[]) {
+  if (!genAI) {
+    throw new Error('AI configuration missing');
+  }
+
+  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      return await model.generateContentStream(prompt);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to generate Gemini response');
+}
+
 const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
 
 async function createExperienceSessions(engagementId: string, orgId: string, retireeId: string) {
@@ -366,7 +397,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
 
   try {
     if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await model.generateContent(prompt);
       const generatedText = result.response.text().trim();
       cleanedTitle = normalizeContextText(generatedText)
@@ -951,13 +982,15 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream([prompt, userResponse]);
+          const result = await generateGeminiStream([prompt, userResponse]);
 
           const stream = new ReadableStream({
             async start(controller) {
               for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
               }
               controller.close();
             },
@@ -966,6 +999,273 @@ Bun.serve({
           return new Response(stream, { headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor: list released retirees in same org
+      if (url.pathname === "/api/successor/retirees" && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const [successorUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!successorUser) return new Response(JSON.stringify([]), { headers: apiHeaders });
+
+          const retirees = await sql`
+            SELECT e.id AS engagement_id, u.full_name, u.job_title, u.id AS retiree_id, e.release_date, e.title
+            FROM transfer_engagements e
+            JOIN users u ON u.id = e.retiree_id
+            WHERE e.org_id = ${successorUser.org_id} AND e.release_date IS NOT NULL
+            ORDER BY u.full_name ASC
+          `;
+          return new Response(JSON.stringify(retirees), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: reset (delete messages, restore active)
+      if (url.pathname.startsWith("/api/successor/chat/") && url.pathname.endsWith("/reset") && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const parts = url.pathname.split("/");
+          const chatId = parts[parts.length - 2];
+          const [owned] = await sql`SELECT id FROM successor_chats WHERE id = ${chatId} AND successor_id = ${decoded.sub}`;
+          if (!owned) return new Response(JSON.stringify({ message: "Chat not found" }), { status: 404, headers: apiHeaders });
+
+          await sql`DELETE FROM successor_chat_messages WHERE chat_id = ${chatId}`;
+          const [chat] = await sql`
+            UPDATE successor_chats
+            SET status = 'active', confirmed_at = NULL, updated_at = NOW()
+            WHERE id = ${chatId}
+            RETURNING *
+          `;
+          return new Response(JSON.stringify({ chat }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: save message
+      if (url.pathname === "/api/successor/chat/messages" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const { chat_id, role, content } = await req.json();
+          const [chat] = await sql`
+            SELECT * FROM successor_chats
+            WHERE id = ${chat_id} AND successor_id = ${decoded.sub} AND status = 'active'
+          `;
+          if (!chat) return new Response(JSON.stringify({ message: "Chat not found or already confirmed" }), { status: 404, headers: apiHeaders });
+
+          const [message] = await sql`
+            INSERT INTO successor_chat_messages (chat_id, role, content)
+            VALUES (${chat_id}, ${role}, ${content})
+            RETURNING *
+          `;
+          return new Response(JSON.stringify({ message }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: confirm/end chat
+      if (url.pathname.startsWith("/api/successor/chat/") && url.pathname.endsWith("/confirm") && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const parts = url.pathname.split("/");
+          const chatId = parts[parts.length - 2];
+          const [chat] = await sql`
+            UPDATE successor_chats
+            SET status = 'confirmed', confirmed_at = NOW(), updated_at = NOW()
+            WHERE id = ${chatId} AND successor_id = ${decoded.sub}
+            RETURNING *
+          `;
+          if (!chat) return new Response(JSON.stringify({ message: "Chat not found" }), { status: 404, headers: apiHeaders });
+          return new Response(JSON.stringify({ chat }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: get or create chat session
+      if (url.pathname.startsWith("/api/successor/chat/") && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const engagementId = url.pathname.split("/").pop();
+          if (!engagementId) return new Response(JSON.stringify({ message: "Engagement not found" }), { status: 404, headers: apiHeaders });
+
+          const [engagement] = await sql`
+            SELECT e.*, u.full_name AS retiree_name, u.job_title AS retiree_job_title
+            FROM transfer_engagements e
+            JOIN users u ON u.id = e.retiree_id
+            WHERE e.id = ${engagementId} AND e.release_date IS NOT NULL
+          `;
+          if (!engagement) return new Response(JSON.stringify({ message: "Knowledge profile not released or not found" }), { status: 404, headers: apiHeaders });
+
+          let [chat] = await sql`
+            SELECT * FROM successor_chats
+            WHERE engagement_id = ${engagementId} AND successor_id = ${decoded.sub}
+          `;
+          if (!chat) {
+            [chat] = await sql`
+              INSERT INTO successor_chats (engagement_id, successor_id, status)
+              VALUES (${engagementId}, ${decoded.sub}, 'active')
+              RETURNING *
+            `;
+          }
+
+          const messages = await sql`
+            SELECT * FROM successor_chat_messages
+            WHERE chat_id = ${chat.id}
+            ORDER BY created_at ASC
+          `;
+          return new Response(JSON.stringify({ chat, messages, engagement }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor stream: AI answers using retiree knowledge as context
+      if (url.pathname === "/api/successor/stream" && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+        if (!genAI) return new Response("AI configuration missing", { status: 500 });
+
+        try {
+          const { chatId, engagementId, message } = await req.json();
+
+          if (typeof chatId !== 'string' || typeof engagementId !== 'string' || typeof message !== 'string') {
+            return new Response(JSON.stringify({ message: 'Invalid payload' }), { status: 400, headers: apiHeaders });
+          }
+
+          const safeMessage = normalizeContextText(message);
+          if (!safeMessage) {
+            return new Response(JSON.stringify({ message: 'Message is required' }), { status: 400, headers: apiHeaders });
+          }
+
+          const [chat] = await sql`
+            SELECT * FROM successor_chats
+            WHERE id = ${chatId} AND successor_id = ${decoded.sub} AND engagement_id = ${engagementId} AND status = 'active'
+          `;
+          if (!chat) return new Response("Chat not found or already confirmed", { status: 404 });
+
+          const [engagement] = await sql`
+            SELECT e.*, u.full_name AS retiree_name, u.job_title, u.years_exp, o.name AS org_name
+            FROM transfer_engagements e
+            JOIN users u ON u.id = e.retiree_id
+            JOIN organizations o ON o.id = e.org_id
+            WHERE e.id = ${engagementId} AND e.release_date IS NOT NULL
+          `;
+          if (!engagement) return new Response("Engagement not released", { status: 404 });
+
+          const knowledgeProfiles = await sql`
+            SELECT section, title, content, quote, knowledge_type
+            FROM knowledge_profiles
+            WHERE engagement_id = ${engagementId}
+            ORDER BY section ASC
+            LIMIT 40
+          `;
+
+          const interviewExchanges = await sql`
+            SELECT x.question_text, x.response_text, s.session_number, s.session_focus
+            FROM interview_exchanges x
+            JOIN interview_sessions s ON s.id = x.session_id
+            WHERE s.engagement_id = ${engagementId} AND x.response_text IS NOT NULL
+            ORDER BY s.session_number ASC, x.sequence_order ASC
+            LIMIT 72
+          `;
+
+          const recentMessages = await sql`
+            SELECT role, content FROM successor_chat_messages
+            WHERE chat_id = ${chatId}
+            ORDER BY created_at ASC
+            LIMIT 10
+          `;
+
+          const profileContext = knowledgeProfiles.length > 0
+            ? limitText(
+                knowledgeProfiles
+                  .map((p: any) => {
+                    const section = asSafeText(p.section || 'general').toUpperCase() || 'GENERAL';
+                    const title = asSafeText(p.title) || 'Untitled';
+                    const content = asSafeText(p.content) || 'No content captured.';
+                    const quote = asSafeText(p.quote);
+                    return `[${section}] ${title}\n${content}${quote ? `\nQuote: "${quote}"` : ''}`;
+                  })
+                  .join('\n\n'),
+                12000,
+              )
+            : 'No structured knowledge profiles captured yet.';
+
+          const exchangeContext = interviewExchanges.length > 0
+            ? limitText(
+                interviewExchanges
+                  .map((x: any, i: number) => {
+                    const sessionNumber = Number.isFinite(Number(x.session_number)) ? Number(x.session_number) : '?';
+                    const focus = asSafeText(x.session_focus) || 'unspecified';
+                    const question = asSafeText(x.question_text) || 'No question captured.';
+                    const answer = asSafeText(x.response_text) || 'No answer captured.';
+                    return `Session ${sessionNumber} (${focus}) Q${i + 1}: ${question}\nAnswer: ${answer}`;
+                  })
+                  .join('\n\n'),
+                16000,
+              )
+            : 'No interview transcript available.';
+
+          const chatHistoryContext = recentMessages.length > 0
+            ? limitText(
+                recentMessages
+                  .map((m: any) => `${m.role === 'user' ? 'Successor' : 'AI'}: ${asSafeText(m.content)}`)
+                  .join('\n'),
+                5000,
+              )
+            : '';
+
+          const prompt = `You are ExitWise AI, a knowledge access assistant helping a successor employee learn from a retiring colleague's captured institutional knowledge.
+
+RETIREE: ${engagement.retiree_name} | Role: ${engagement.job_title || 'Expert'} | Org: ${engagement.org_name} | ${engagement.years_exp || '?'} years exp
+
+CAPTURED KNOWLEDGE PROFILES:
+${profileContext}
+
+INTERVIEW TRANSCRIPT:
+${exchangeContext}
+
+${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}INSTRUCTIONS:
+- Answer ONLY using the captured knowledge above
+- If information is not captured, say: "This wasn't captured in the knowledge transfer sessions."
+- Be specific and practical for the successor
+- Output plain text only. No HTML, markdown, or formatting symbols.
+
+Successor's question: ${safeMessage}`;
+
+          const result = await generateGeminiStream(prompt);
+
+          const stream = new ReadableStream({
+            async start(controller) {
+              for await (const chunk of result.stream) {
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
+              }
+              controller.close();
+            },
+          });
+
+          return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        } catch (e: any) {
+          console.error('[successor/stream]', e);
+          const message = typeof e?.message === 'string' && e.message ? e.message : 'AI stream failed';
+          return new Response(JSON.stringify({ message }), { status: 500, headers: apiHeaders });
         }
       }
 

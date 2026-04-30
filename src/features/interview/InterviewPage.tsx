@@ -7,6 +7,7 @@ import { interviewService } from '../../services/api';
 import { ROUTES } from '../../config/constants';
 import type { QuestionType } from '../../types';
 import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
+import UserMenu from '../../components/shared/UserMenu';
 
 function groupSessionExchanges(exchanges: any[]) {
   return exchanges.reduce<Record<number, any[]>>((groups, exchange) => {
@@ -255,6 +256,7 @@ export default function InterviewPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
+            <UserMenu />
           </div>
         </header>
 

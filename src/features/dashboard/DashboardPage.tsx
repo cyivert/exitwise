@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../config/constants';
 import { dashboardService, interviewService } from '../../services/api';
+import UserMenu from '../../components/shared/UserMenu';
 
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
@@ -166,11 +167,9 @@ export default function DashboardPage() {
         <div className="text-xl font-serif">
           Exit<span className="text-amber italic">Wise</span>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-green-pale">{user.full_name}</span>
-          <div className="w-8 h-8 rounded-full bg-amber flex items-center justify-center text-white text-xs font-bold">
-            {user.full_name.split(' ').map(n => n[0]).join('')}
-          </div>
+        <div className="flex items-center space-x-3">
+          <span className="text-sm text-green-pale hidden md:block">{user.full_name}</span>
+          <UserMenu dark />
         </div>
       </nav>
 
@@ -394,7 +393,12 @@ export default function DashboardPage() {
                     {data?.engagement?.release_date ? (
                     <>
                       <p className="text-text-mid mb-6">Access granted to the knowledge profile. Retiree has authorized release.</p>
-                      <button className="btn-primary w-full">Access Knowledge Profile</button>
+                      <button
+                        className="btn-primary w-full"
+                        onClick={() => navigate(ROUTES.KNOWLEDGE)}
+                      >
+                        Access Knowledge Profile
+                      </button>
                     </>
                   ) : (
                     <p className="text-text-mid italic">Profile pending authorization from Retiree. Trust boundary enforced.</p>
