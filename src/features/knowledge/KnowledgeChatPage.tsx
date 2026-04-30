@@ -152,16 +152,16 @@ export default function KnowledgeChatPage() {
       {/* Split body */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Left sidebar: retiree list */}
-        <aside className="w-60 bg-white border-r border-cream-dark flex flex-col shrink-0">
-          <div className="px-4 py-3 border-b border-cream-dark">
-            <p className="text-xs font-bold uppercase tracking-widest text-text-light">Knowledge Sources</p>
+        {/* Left sidebar: retiree list — full-screen on mobile when no chat active */}
+        <aside className={`${engagementId ? 'hidden md:flex' : 'flex w-full'} md:w-64 bg-green-deep md:border-r border-green-mid/30 flex-col shrink-0`}>
+          <div className="px-4 py-4 border-b border-green-mid/30">
+            <p className="label-caps text-amber">Knowledge Sources</p>
           </div>
           <div className="flex-1 overflow-y-auto">
             {isLoadingRetirees ? (
-              <p className="p-4 text-sm text-text-light">Loading...</p>
+              <p className="p-4 text-sm text-green-pale/60">Loading...</p>
             ) : retirees.length === 0 ? (
-              <p className="p-4 text-sm text-text-light italic">No released profiles in your organization.</p>
+              <p className="p-4 text-sm text-green-pale/50 italic">No released profiles in your organization.</p>
             ) : (
               retirees.map(r => {
                 const isSelected = engagementId === r.engagement_id;
@@ -169,17 +169,17 @@ export default function KnowledgeChatPage() {
                   <button
                     key={r.engagement_id}
                     onClick={() => navigate(`/knowledge/${r.engagement_id}`)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-cream transition-colors border-b border-cream-dark/40 ${isSelected ? 'bg-cream border-l-2 border-l-amber' : ''}`}
+                    className={`w-full flex items-center gap-3 px-4 py-4 md:py-3 text-left transition-colors border-b border-green-mid/20 active:bg-green-mid/40 ${isSelected ? 'bg-green-mid/60' : 'hover:bg-green-mid/30'}`}
                   >
-                    <div className="w-9 h-9 rounded-full bg-green-deep flex items-center justify-center text-cream text-xs font-bold shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-green-mid flex items-center justify-center text-cream text-xs font-bold shrink-0">
                       {getInitials(r.full_name)}
                     </div>
                     <div className="min-w-0">
-                      <p className={`text-sm font-medium truncate ${isSelected ? 'text-text-dark' : 'text-text-mid'}`}>
+                      <p className={`text-sm font-medium truncate ${isSelected ? 'text-amber' : 'text-cream'}`}>
                         {r.full_name}
                       </p>
                       {r.job_title && (
-                        <p className="text-xs text-text-light truncate">{r.job_title}</p>
+                        <p className="text-xs text-green-pale/60 truncate">{r.job_title}</p>
                       )}
                     </div>
                   </button>
@@ -189,13 +189,14 @@ export default function KnowledgeChatPage() {
           </div>
         </aside>
 
-        {/* Right: chat area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Right: chat area — hidden on mobile until engagement selected */}
+        <div className={`${!engagementId ? 'hidden md:flex' : 'flex'} flex-1 flex-col overflow-hidden`}>
           {!engagementId || (!selectedEngagement && !isLoadingChat) ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <p className="font-serif text-xl text-text-dark mb-2">Select a knowledge source</p>
-                <p className="text-sm text-text-light">Choose a retiree from the left to begin.</p>
+              <div className="text-center px-8">
+                <p className="label-caps text-amber mb-3">Get Started</p>
+                <p className="font-serif text-2xl text-text-dark mb-3">Select a knowledge source</p>
+                <p className="text-sm text-text-light">Choose a retiree profile from the left panel to begin exploring their knowledge.</p>
               </div>
             </div>
           ) : isLoadingChat ? (
@@ -205,8 +206,17 @@ export default function KnowledgeChatPage() {
           ) : (
             <>
               {/* Chat top bar */}
-              <div className="bg-white border-b border-cream-dark px-5 py-3 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
+              <div className="bg-cream border-b border-cream-dark/60 px-4 py-3 md:px-5 md:py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button
+                    onClick={() => navigate(ROUTES.KNOWLEDGE)}
+                    className="md:hidden p-1.5 -ml-1 hover:bg-cream-dark rounded-full transition-colors shrink-0"
+                    title="Back to list"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                  </button>
                   <div className="w-9 h-9 rounded-full bg-green-deep flex items-center justify-center text-cream text-xs font-bold shrink-0">
                     {selectedEngagement?.retiree_name ? getInitials(selectedEngagement.retiree_name) : '?'}
                   </div>
@@ -246,10 +256,12 @@ export default function KnowledgeChatPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
                 {messages.length === 0 && !isStreaming && (
-                  <div className="flex flex-col items-center py-10 px-4 gap-5">
-                    <p className="text-text-light text-sm text-center">
-                      Ask anything about {selectedEngagement?.retiree_name}'s experience, or start with a suggestion:
-                    </p>
+                  <div className="flex flex-col items-center py-12 px-4 gap-6">
+                    <div className="text-center">
+                      <p className="label-caps text-amber mb-2">Explore Knowledge</p>
+                      <p className="font-serif text-xl text-text-dark mb-2">Ask {selectedEngagement?.retiree_name?.split(' ')[0]} anything</p>
+                      <p className="text-sm text-text-light">Start with a suggestion below or type your own question.</p>
+                    </div>
                     <div className="flex flex-wrap gap-2 justify-center max-w-md">
                       {[
                         `What were ${selectedEngagement?.retiree_name?.split(' ')[0]}'s key day-to-day processes?`,
@@ -278,7 +290,7 @@ export default function KnowledgeChatPage() {
                         AI
                       </div>
                     )}
-                    <div className={`max-w-xs md:max-w-sm rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    <div className={`max-w-[75%] md:max-w-sm rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-amber text-white rounded-br-sm'
                         : 'bg-white border border-cream-dark text-text-dark rounded-bl-sm shadow-sm'
@@ -298,7 +310,7 @@ export default function KnowledgeChatPage() {
                     <div className="w-7 h-7 rounded-full bg-green-deep flex items-center justify-center text-cream text-xs font-bold shrink-0">
                       AI
                     </div>
-                    <div className="max-w-xs md:max-w-sm rounded-2xl rounded-bl-sm px-4 py-2.5 bg-white border border-cream-dark text-text-dark text-sm leading-relaxed shadow-sm">
+                    <div className="max-w-[75%] md:max-w-sm rounded-2xl rounded-bl-sm px-4 py-2.5 bg-white border border-cream-dark text-text-dark text-sm leading-relaxed shadow-sm">
                       {streamingText || <span className="text-text-light italic">Searching knowledge...</span>}
                     </div>
                   </div>
@@ -309,7 +321,7 @@ export default function KnowledgeChatPage() {
 
               {/* Input bar */}
               {!isConfirmed ? (
-                <div className="bg-white border-t border-cream-dark px-4 py-3 shrink-0">
+                <div className="bg-cream border-t border-cream-dark px-4 py-3 shrink-0">
                   <div className="flex items-end gap-2">
                     <textarea
                       value={input}
@@ -322,7 +334,7 @@ export default function KnowledgeChatPage() {
                       }}
                       placeholder="Message..."
                       rows={1}
-                      className="flex-1 px-4 py-2.5 bg-cream rounded-full border border-cream-dark resize-none focus:outline-none focus:ring-1 focus:ring-green-mid text-sm leading-snug"
+                      className="flex-1 px-4 py-2.5 bg-white rounded-full border border-cream-dark resize-none focus:outline-none focus:ring-1 focus:ring-green-mid text-sm leading-snug"
                       disabled={isStreaming}
                       style={{ maxHeight: '80px' }}
                     />

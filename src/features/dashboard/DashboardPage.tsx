@@ -192,10 +192,10 @@ export default function DashboardPage() {
           <>
             {isOrganizationAdmin && (
               <div className="space-y-8 mb-12">
-                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-cream-dark flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div className="bg-white border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)]">
+                  <div className="p-6 border-b border-green-deep/10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
                     <div>
-                      <p className="label-caps mb-2">Organization Admin Panel</p>
+                      <p className="label-caps text-amber mb-2">Organization Admin Panel</p>
                       <h3 className="text-2xl font-serif">{data?.organization?.name || 'Organization'}</h3>
                       <p className="text-text-light">Manage organization members, retiree experiences, and access from one place.</p>
                     </div>
@@ -204,14 +204,14 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="px-6 pt-6 flex flex-wrap gap-2 border-b border-cream-dark bg-cream/25">
-                    <button onClick={() => setAdminTab('overview')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'overview' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                  <div className="px-6 flex gap-6 border-b border-green-deep/10">
+                    <button onClick={() => setAdminTab('overview')} className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${adminTab === 'overview' ? 'border-amber text-amber' : 'border-transparent text-text-mid hover:text-text-dark'}`}>
                       Overview
                     </button>
-                    <button onClick={() => setAdminTab('members')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'members' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                    <button onClick={() => setAdminTab('members')} className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${adminTab === 'members' ? 'border-amber text-amber' : 'border-transparent text-text-mid hover:text-text-dark'}`}>
                       Members
                     </button>
-                    <button onClick={() => setAdminTab('experiences')} className={`px-4 py-2 rounded-t-md text-sm font-medium transition-colors ${adminTab === 'experiences' ? 'bg-white border border-b-0 border-cream-dark text-text-dark' : 'text-text-mid hover:text-text-dark'}`}>
+                    <button onClick={() => setAdminTab('experiences')} className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${adminTab === 'experiences' ? 'border-amber text-amber' : 'border-transparent text-text-mid hover:text-text-dark'}`}>
                       Experiences
                     </button>
                   </div>
@@ -289,9 +289,10 @@ export default function DashboardPage() {
 
             {user.role === 'retiree' && (
               <div className="space-y-8">
-                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-cream-dark flex justify-between items-center gap-4">
+                <div className="bg-white border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)]">
+                  <div className="p-6 border-b border-green-deep/10 flex justify-between items-center gap-4">
                     <div>
+                      <p className="label-caps text-amber mb-1">Experiences</p>
                       <h3 className="text-xl font-serif">Experience Catalogue</h3>
                       <p className="text-sm text-text-light">Add, select, or remove a retiree experience.</p>
                     </div>
@@ -342,9 +343,10 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg border border-cream-dark shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-cream-dark flex justify-between items-center">
+                <div className="bg-white border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)]">
+                  <div className="p-6 border-b border-green-deep/10 flex justify-between items-center">
                     <div>
+                      <p className="label-caps text-amber mb-1">Knowledge Sessions</p>
                       <h3 className="text-xl font-serif">Your Knowledge Sessions</h3>
                       <p className="text-sm text-text-light">{selectedExperience ? `Selected Experience ${selectedExperienceId === data?.activeExperience?.id ? ' (active)' : ''}` : 'Select an experience to continue.'}</p>
                     </div>
@@ -381,7 +383,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-lg border border-cream-dark shadow-sm">
+                <div className="bg-white p-8 border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)]">
+                  <p className="label-caps text-amber mb-2">Knowledge Control</p>
                   <h3 className="text-2xl mb-4 font-serif">The Legacy Trust™ Control</h3>
                   <p className="text-text-mid mb-6">
                     You own your knowledge. Your selected experience is currently <strong>{selectedExperience?.release_date ? 'Released' : 'Private'}</strong>.
@@ -398,21 +401,22 @@ export default function DashboardPage() {
             )}
 
             {user.role === 'successor' && (
-              <div className="max-w-2xl">
-                <div className="bg-white p-8 rounded-lg border border-cream-dark shadow-sm">
-                  <h3 className="text-2xl mb-4 font-serif">Assigned Knowledge Profile</h3>
-                    {data?.engagement?.release_date ? (
+              <div className="flex flex-col items-center py-12">
+                <div className="bg-white p-10 border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)] max-w-md w-full text-center">
+                  <p className="label-caps text-amber mb-3">Successor Access</p>
+                  <h3 className="font-serif text-3xl mb-6">Assigned Knowledge Profile</h3>
+                  {data?.engagement?.release_date ? (
                     <>
-                      <p className="text-text-mid mb-6">Access granted to the knowledge profile. Retiree has authorized release.</p>
+                      <p className="text-text-mid mb-8">Access granted. Retiree has authorized release of their knowledge profile.</p>
                       <button
-                        className="btn-primary w-full"
+                        className="btn-primary w-full py-3 text-base"
                         onClick={() => navigate(ROUTES.KNOWLEDGE)}
                       >
                         Access Knowledge Profile
                       </button>
                     </>
                   ) : (
-                    <p className="text-text-mid italic">Profile pending authorization from Retiree. Trust boundary enforced.</p>
+                    <p className="text-text-mid italic mt-2">Profile pending authorization from Retiree. Trust boundary enforced.</p>
                   )}
                 </div>
               </div>
