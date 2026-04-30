@@ -114,13 +114,65 @@ async function generateAnthropicStream(prompt: string | string[]) {
       });
 
       if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(`Anthropic error ${res.status}: ${txt}`);
+        // try to parse JSON error body for helpful debugging
+        let bodyText = '';
+        try {
+          const json = await res.json();
+          bodyText = JSON.stringify(json);
+        } catch {
+          bodyText = await res.text().catch(() => '');
+        }
+        console.error('[anthropic] non-ok response', res.status, bodyText);
+        throw new Error(`Anthropic error ${res.status}: ${bodyText}`);
       }
 
+      const contentType = res.headers.get('content-type') || '';
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No stream from Anthropic');
 
+      // If response is SSE/text-event-stream, parse data: frames. Otherwise stream raw chunks.
+      if (contentType.includes('text/event-stream') || contentType.includes('event-stream')) {
+        async function* sseGenerator() {
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let idx;
+            while ((idx = buffer.indexOf('\n\n')) !== -1) {
+              const raw = buffer.slice(0, idx).trim();
+              buffer = buffer.slice(idx + 2);
+              // each event may contain lines starting with 'data: '
+              const lines = raw.split(/\n/).map(l => l.replace(/^data:\s?/, ''));
+              for (const line of lines) {
+                if (!line || line === '[DONE]') continue;
+                // attempt to extract text from JSON event
+                try {
+                  const obj = JSON.parse(line);
+                  // common keys: 'completion' or 'delta' or 'text'
+                  const text = obj.completion ?? obj.delta ?? obj.text ?? obj.chunk ?? JSON.stringify(obj);
+                  yield { text: () => String(text) };
+                } catch {
+                  yield { text: () => line };
+                }
+              }
+            }
+          }
+          if (buffer.trim()) {
+            try {
+              const obj = JSON.parse(buffer.trim());
+              const text = obj.completion ?? obj.delta ?? obj.text ?? obj.chunk ?? JSON.stringify(obj);
+              yield { text: () => String(text) };
+            } catch {
+              yield { text: () => buffer };
+            }
+          }
+        }
+        return { stream: sseGenerator() };
+      }
+
+      // fallback: stream raw decoded chunks
       async function* streamGenerator() {
         const decoder = new TextDecoder();
         while (true) {
@@ -144,6 +196,47 @@ async function generateModelStream(prompt: string | string[]) {
   // Priority: Anthropic (if configured) -> Gemini (if configured)
   if (ANTHROPIC_API_KEY) return await generateAnthropicStream(prompt);
   if (GEMINI_API_KEY && genAI) return await generateGeminiStream(prompt);
+  throw new Error('No AI provider configured');
+}
+
+async function generateAnthropicText(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+  const model = process.env.ANTHROPIC_MODEL || 'claude-2.1';
+  const body = {
+    model,
+    input: Array.isArray(prompt) ? prompt.join('\n') : String(prompt),
+    max_tokens: 512,
+    temperature: 0.2,
+    stream: false,
+  };
+
+  const res = await fetch(ANTHROPIC_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': ANTHROPIC_API_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Anthropic error ${res.status}: ${txt}`);
+  }
+
+  const json = await res.json();
+  // Anthropic responses may put text in 'completion' or 'output' depending on API; try common keys.
+  const text = json?.completion ?? json?.output?.[0]?.content ?? json?.output?.content ?? json?.text ?? null;
+  return typeof text === 'string' ? text : JSON.stringify(json);
+}
+
+async function generateModelText(prompt: string | string[]) {
+  if (ANTHROPIC_API_KEY) return await generateAnthropicText(prompt);
+  if (GEMINI_API_KEY && genAI) {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const result = await model.generateContent(Array.isArray(prompt) ? prompt : String(prompt));
+    return result.response?.text?.()?.trim?.() ?? '';
+  }
   throw new Error('No AI provider configured');
 }
 
@@ -307,10 +400,8 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
   let cleanedTitle = '';
 
   try {
-    if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const result = await model.generateContent(prompt);
-      const generatedText = result.response.text().trim();
+    const generatedText = await generateModelText(prompt);
+    if (generatedText) {
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
         .replace(/^['\"`]|['\"`]$/g, '')
