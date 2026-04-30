@@ -90,7 +90,7 @@ async function generateGeminiStream(prompt: string | string[]) {
 async function generateAnthropicStream(prompt: string | string[]) {
   if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
 
-  const models = [process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
+  const models = [process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307', 'claude-3-sonnet-20240229'];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -175,7 +175,7 @@ async function generateModelStream(prompt: string | string[]) {
 
 async function generateAnthropicText(prompt: string | string[]) {
   if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
-  const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022';
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
   const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
   const body = {
     model,
