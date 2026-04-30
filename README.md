@@ -1,5 +1,20 @@
 # React + TypeScript + Vite
 
+## Local Development
+
+Run the API server and Vite dev server together:
+
+```sh
+bun run dev
+```
+
+Vite proxies `/api/*` requests to `http://localhost:8080`, where `server.ts`
+serves the backend routes.
+
+Open the frontend at `http://localhost:5173`. The API runs at
+`http://localhost:8080`. If either port is already in use, `bun run dev` exits
+with the occupied port instead of silently moving Vite to a different localhost.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

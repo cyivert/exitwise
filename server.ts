@@ -10,12 +10,205 @@ const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
 }
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const useDemoApi = DATABASE_URL.includes(".railway.internal") && !process.env.RAILWAY_ENVIRONMENT;
+
+type DemoUser = {
+  id: string;
+  org_id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  role: string;
+  job_title?: string | null;
+  years_exp?: number | null;
+  created_at: string;
+};
+
+const demoOrg = {
+  id: "demo-org",
+  name: "Local Demo Organization",
+  industry: "other",
+  invite_code: "DEMO2026",
+};
+
+const demoUsers = new Map<string, DemoUser>();
+const demoExperiences = new Map<string, any>();
+const demoSessions = new Map<string, any>();
+const demoExchanges = new Map<string, any[]>();
+
+function safeJson(data: unknown, headers: Headers, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers,
+  });
+}
+
+function toSafeUser(user: DemoUser) {
+  const { password_hash, ...safeUser } = user;
+  return safeUser;
+}
+
+function makeDemoExperience(user: DemoUser) {
+  const existing = [...demoExperiences.values()].find((experience) => experience.retiree_id === user.id);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const engagement = {
+    id: crypto.randomUUID(),
+    org_id: user.org_id,
+    retiree_id: user.id,
+    successor_id: null,
+    title: `${user.job_title || "Retiree"} Knowledge Transfer`,
+    status: "active",
+    release_date: null,
+    transcript: [],
+    created_at: now,
+    updated_at: now,
+  };
+
+  demoExperiences.set(engagement.id, engagement);
+  SESSION_FOCUS_SEQUENCE.forEach((session_focus, index) => {
+    const session = {
+      id: crypto.randomUUID(),
+      engagement_id: engagement.id,
+      org_id: user.org_id,
+      retiree_id: user.id,
+      session_number: index + 1,
+      session_focus,
+      status: index === 0 ? "active" : "pending",
+      running_summary: [],
+      created_at: now,
+    };
+    demoSessions.set(session.id, session);
+    demoExchanges.set(session.id, []);
+  });
+
+  return engagement;
+}
+
+async function handleDemoApi(req: Request, url: URL, headers: Headers) {
+  if (!useDemoApi) return null;
+
+  const decoded = verifyToken(req.headers.get("Authorization"));
+
+  if (url.pathname === "/api/auth/signup" && req.method === "POST") {
+    const validated = signupSchema.parse(await req.json());
+    const existing = demoUsers.get(validated.email.toLowerCase());
+    if (existing) return safeJson({ message: "Email already exists" }, headers, { status: 400 });
+
+    const now = new Date().toISOString();
+    const user: DemoUser = {
+      id: crypto.randomUUID(),
+      org_id: demoOrg.id,
+      email: validated.email.toLowerCase(),
+      password_hash: await Bun.password.hash(validated.password),
+      full_name: validated.full_name,
+      role: validated.org_name && !validated.invite_code ? "organization_admin" : validated.role,
+      created_at: now,
+    };
+    demoUsers.set(user.email, user);
+    if (user.role === "retiree") makeDemoExperience(user);
+
+    const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    return safeJson({ user: toSafeUser(user), token }, headers);
+  }
+
+  if (url.pathname === "/api/auth/login" && req.method === "POST") {
+    const validated = loginSchema.parse(await req.json());
+    const user = demoUsers.get(validated.email.toLowerCase());
+    if (!user || !(await Bun.password.verify(validated.password, user.password_hash))) {
+      return safeJson({ message: "Invalid credentials" }, headers, { status: 401 });
+    }
+    if (user.role === "retiree") makeDemoExperience(user);
+
+    const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    return safeJson({ user: toSafeUser(user), token }, headers);
+  }
+
+  if (!decoded) return null;
+
+  const user = [...demoUsers.values()].find((candidate) => candidate.id === decoded.sub);
+  if (!user) return safeJson({ message: "Demo user not found. Sign up again after server restart." }, headers, { status: 401 });
+
+  if (url.pathname === "/api/dashboard" && req.method === "GET") {
+    if (user.role === "retiree") {
+      const experiences = [...demoExperiences.values()].filter((experience) => experience.retiree_id === user.id);
+      const activeExperience = experiences.find((experience) => experience.status === "active") || experiences[0] || null;
+      const sessions = activeExperience
+        ? [...demoSessions.values()].filter((session) => session.engagement_id === activeExperience.id).sort((a, b) => a.session_number - b.session_number)
+        : [];
+      return safeJson({ experiences, activeExperience, sessions }, headers);
+    }
+
+    return safeJson({
+      organization: demoOrg,
+      members: [...demoUsers.values()].map(toSafeUser),
+      experiences: [...demoExperiences.values()],
+    }, headers);
+  }
+
+  if (url.pathname === "/api/experiences" && req.method === "POST") {
+    const engagement = makeDemoExperience(user);
+    const sessions = [...demoSessions.values()].filter((session) => session.engagement_id === engagement.id);
+    return safeJson({ engagement, sessions }, headers);
+  }
+
+  if (url.pathname === "/api/sessions" && req.method === "GET") {
+    const engagementId = url.searchParams.get("engagement_id");
+    const sessions = [...demoSessions.values()]
+      .filter((session) => !engagementId || session.engagement_id === engagementId)
+      .sort((a, b) => a.session_number - b.session_number);
+    return safeJson(sessions, headers);
+  }
+
+  if (url.pathname.startsWith("/api/sessions/") && req.method === "GET") {
+    const sessionId = url.pathname.split("/").pop() || "";
+    const session = demoSessions.get(sessionId);
+    if (!session) return safeJson({ message: "Session not found" }, headers, { status: 404 });
+    const session_exchanges = demoExchanges.get(sessionId) || [];
+    return safeJson({
+      ...session,
+      experience_transcript: session_exchanges,
+      latest_exchange: session_exchanges.at(-1) || null,
+      session_exchanges,
+      experience_exchanges: session_exchanges,
+    }, headers);
+  }
+
+  if (url.pathname === "/api/exchanges" && req.method === "POST") {
+    const body = await req.json();
+    const current = demoExchanges.get(body.session_id) || [];
+    const exchange = { ...body, created_at: new Date().toISOString() };
+    demoExchanges.set(body.session_id, [...current.filter((item) => item.id !== body.id), exchange]);
+    return safeJson({ status: "success" }, headers);
+  }
+
+  if (url.pathname === "/api/interview/stream" && req.method === "POST") {
+    return new Response("Thanks. What concrete example best shows that knowledge in action?", {
+      headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  if (url.pathname.startsWith("/api/profiles/")) {
+    return safeJson({
+      summary: "Local demo profile. Connect a public Postgres DATABASE_URL for persisted data.",
+      entries: [...demoExchanges.values()].flat(),
+    }, headers);
+  }
+
+  return null;
+}
+
+if (useDemoApi) {
+  console.warn("Using local demo API because DATABASE_URL points to Railway private host.");
+}
 
 // simple in-memory rate limit for auth.
 const rateLimit = new Map<string, { count: number; reset: number }>();
@@ -217,6 +410,13 @@ Bun.serve({
     if (url.pathname.startsWith("/api")) {
       const apiHeaders = new Headers(headers);
       apiHeaders.set("Content-Type", "application/json");
+      try {
+        const demoResponse = await handleDemoApi(req, url, apiHeaders);
+        if (demoResponse) return demoResponse;
+      } catch (e: any) {
+        const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+        return safeJson({ message }, apiHeaders, { status: 400 });
+      }
 
       // auth signup
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
