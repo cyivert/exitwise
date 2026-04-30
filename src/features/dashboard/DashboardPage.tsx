@@ -394,7 +394,13 @@ export default function DashboardPage() {
                     {data?.engagement?.release_date ? (
                     <>
                       <p className="text-text-mid mb-6">Access granted to the knowledge profile. Retiree has authorized release.</p>
-                      <button className="btn-primary w-full">Access Knowledge Profile</button>
+                      <button
+                        className="btn-primary w-full"
+                        onClick={() => navigate(`/knowledge/${data?.engagement?.id}`)}
+                        disabled={!data?.engagement?.id}
+                      >
+                        Access Knowledge Profile
+                      </button>
                     </>
                   ) : (
                     <p className="text-text-mid italic">Profile pending authorization from Retiree. Trust boundary enforced.</p>

@@ -80,6 +80,14 @@ export const dashboardService = {
   }),
 };
 
+export const successorChatService = {
+  getOrCreateChat: (engagementId: string) => apiFetch<any>(`/successor/chat/${engagementId}`),
+  saveMessage: (payload: { chat_id: string; role: 'user' | 'assistant'; content: string }) =>
+    apiFetch<any>('/successor/chat/messages', { method: 'POST', body: JSON.stringify(payload) }),
+  confirmChat: (chatId: string) =>
+    apiFetch<any>(`/successor/chat/${chatId}/confirm`, { method: 'POST' }),
+};
+
 export const profileService = {
   getProfile: (engagementId: string) => apiFetch<any>(`/profiles/${engagementId}`),
   queryProfile: (engagementId: string, query: string) => apiFetch<any>(`/profiles/${engagementId}/query`, {

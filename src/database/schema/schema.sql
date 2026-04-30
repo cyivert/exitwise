@@ -1,4 +1,10 @@
--- drop in reverse order to clear dependencies
+-- ============================================================
+-- ExitWise schema — run full block to reset dev DB
+-- WARNING: DROPs destroy all data. Production: use migrations.
+-- ============================================================
+
+DROP TABLE IF EXISTS successor_chat_messages CASCADE;
+DROP TABLE IF EXISTS successor_chats CASCADE;
 DROP TABLE IF EXISTS knowledge_profiles CASCADE;
 DROP TABLE IF EXISTS interview_exchanges CASCADE;
 DROP TABLE IF EXISTS interview_sessions CASCADE;
@@ -6,14 +12,12 @@ DROP TABLE IF EXISTS transfer_engagements CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 
--- enable uuid support
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- 1. organizations
 CREATE TABLE organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   industry TEXT NOT NULL,
+  invite_code TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -36,10 +40,10 @@ CREATE TABLE users (
 CREATE TABLE transfer_engagements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  retiree_id UUID NOT NULL REFERENCES users(id),
+  retiree_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  successor_id UUID REFERENCES users(id) ON DELETE SET NULL,
   title TEXT,
   transcript JSONB DEFAULT '[]',
-  successor_id UUID REFERENCES users(id),
   retirement_date DATE,
   release_date DATE,
   status TEXT DEFAULT 'pending',
@@ -91,17 +95,23 @@ CREATE TABLE knowledge_profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
- --Create column:
-ALTER TABLE organizations ADD COLUMN invite_code TEXT;
+-- 7. successor_chats (one session per successor per engagement)
+CREATE TABLE successor_chats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  engagement_id UUID NOT NULL REFERENCES transfer_engagements(id) ON DELETE CASCADE,
+  successor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'active',
+  confirmed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(engagement_id, successor_id)
+);
 
---Verify it exist:
-SELECT column_name FROM information_schema.columns WHERE table_name = 'organizations';
-
---If exist, add constraint and data:
-ALTER TABLE organizations ADD CONSTRAINT organizations_invite_code_key UNIQUE (invite_code);
-UPDATE organizations
-SET invite_code = substring(gen_random_uuid()::text, 1, 8)
-WHERE invite_code IS NULL;
-
-ALTER TABLE transfer_engagements ADD COLUMN IF NOT EXISTS title TEXT;
-ALTER TABLE transfer_engagements ADD COLUMN IF NOT EXISTS transcript JSONB DEFAULT '[]';
+-- 8. successor_chat_messages
+CREATE TABLE successor_chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_id UUID NOT NULL REFERENCES successor_chats(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

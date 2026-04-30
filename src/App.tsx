@@ -6,6 +6,7 @@ import SignupPage from './features/auth/SignupPage';
 import DashboardPage from './features/dashboard/DashboardPage';
 import InterviewPage from './features/interview/InterviewPage';
 import ProfilePage from './features/profile/ProfilePage';
+import KnowledgeChatPage from './features/knowledge/KnowledgeChatPage';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 
 export default function App() {
@@ -31,6 +32,12 @@ export default function App() {
         <Route path={ROUTES.PROFILE} element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path={ROUTES.KNOWLEDGE_CHAT} element={
+          <ProtectedRoute allowedRoles={['successor']}>
+            <KnowledgeChatPage />
           </ProtectedRoute>
         } />
         
