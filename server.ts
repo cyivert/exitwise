@@ -10,6 +10,8 @@ const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/responses';
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
@@ -70,7 +72,7 @@ async function generateGeminiStream(prompt: string | string[]) {
     throw new Error('AI configuration missing');
   }
 
-  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -83,6 +85,108 @@ async function generateGeminiStream(prompt: string | string[]) {
   }
 
   throw lastError instanceof Error ? lastError : new Error('Failed to generate Gemini response');
+}
+
+async function generateAnthropicStream(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+
+  const models = [process.env.ANTHROPIC_MODEL || 'claude-2.1', 'claude-2.0'];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const body = {
+        model: modelName,
+        input: Array.isArray(prompt) ? prompt.join('\n') : String(prompt),
+        max_tokens: 1024,
+        temperature: 0.2,
+        stream: true,
+      };
+
+      const res = await fetch(ANTHROPIC_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream, application/json',
+          'X-API-Key': ANTHROPIC_API_KEY,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`Anthropic error ${res.status}: ${txt}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No stream from Anthropic');
+
+      async function* streamGenerator() {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          yield { text: () => chunk };
+        }
+      }
+
+      return { stream: streamGenerator() };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Anthropic generation failed');
+}
+
+async function generateModelStream(prompt: string | string[]) {
+  // Priority: Anthropic (if configured) -> Gemini (if configured)
+  if (ANTHROPIC_API_KEY) return await generateAnthropicStream(prompt);
+  if (GEMINI_API_KEY && genAI) return await generateGeminiStream(prompt);
+  throw new Error('No AI provider configured');
+}
+
+function parseGeminiError(error: unknown) {
+  const fallbackMessage = 'AI is temporarily unavailable. Please try again shortly.';
+  const rawMessage = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : fallbackMessage;
+
+  const message = rawMessage || fallbackMessage;
+  const lower = message.toLowerCase();
+  const isQuotaOrRateLimit =
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit');
+
+  let retryAfterSeconds: number | null = null;
+  const retryMatch = message.match(/retry(?:\s+in)?\s+([\d.]+)s/i) || message.match(/"retryDelay":"(\d+)s"/i);
+  if (retryMatch) {
+    const parsed = Number(retryMatch[1]);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      retryAfterSeconds = Math.ceil(parsed);
+    }
+  }
+
+  if (isQuotaOrRateLimit) {
+    return {
+      status: 429,
+      message: 'Gemini rate limit reached for this project. Please retry shortly or add billing/quota for the configured API key.',
+      retryAfterSeconds,
+      rawMessage: message,
+    };
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+    retryAfterSeconds,
+    rawMessage: message,
+  };
 }
 
 const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
@@ -382,7 +486,12 @@ Bun.serve({
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 
@@ -782,7 +891,7 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const result = await generateGeminiStream([prompt, userResponse]);
+          const result = await generateModelStream([prompt, userResponse]);
 
           const stream = new ReadableStream({
             async start(controller) {
@@ -1047,7 +1156,7 @@ ${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}INS
 
 Successor's question: ${safeMessage}`;
 
-          const result = await generateGeminiStream(prompt);
+          const result = await generateModelStream(prompt);
 
           const stream = new ReadableStream({
             async start(controller) {
@@ -1064,8 +1173,12 @@ Successor's question: ${safeMessage}`;
           return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
           console.error('[successor/stream]', e);
-          const message = typeof e?.message === 'string' && e.message ? e.message : 'AI stream failed';
-          return new Response(JSON.stringify({ message }), { status: 500, headers: apiHeaders });
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 
