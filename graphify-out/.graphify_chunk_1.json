@@ -1,0 +1,207 @@
+{
+  "nodes": [
+    {
+      "id": "app_exitwise",
+      "label": "ExitWise Application",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_legacy_trust",
+      "label": "Legacy Trust™ Control",
+      "file_type": "code",
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 424",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_tacit_knowledge",
+      "label": "Tacit Knowledge",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_bun",
+      "label": "Bun Server",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 1",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_gemini",
+      "label": "Google Gemini AI",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 3",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "logic_create_sessions",
+      "label": "createExperienceSessions",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 55",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "logic_generate_title",
+      "label": "generateExperienceTitle",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 117",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "store_interview",
+      "label": "useInterviewStore",
+      "file_type": "code",
+      "source_file": "src/store/interviewStore.ts",
+      "source_location": "line 24",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_retiree",
+      "label": "Retiree Role",
+      "file_type": "code",
+      "source_file": "src/types/index.ts",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_successor",
+      "label": "Successor Role",
+      "file_type": "code",
+      "source_file": "src/types/index.ts",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "tech_bun",
+      "target": "tech_gemini",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.ts",
+      "source_location": "line 179",
+      "weight": 1.0
+    },
+    {
+      "source": "logic_generate_title",
+      "target": "tech_gemini",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.ts",
+      "source_location": "line 180",
+      "weight": 1.0
+    },
+    {
+      "source": "app_exitwise",
+      "target": "concept_tacit_knowledge",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_legacy_trust",
+      "target": "role_retiree",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 425",
+      "weight": 0.8
+    },
+    {
+      "source": "store_interview",
+      "target": "logic_create_sessions",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/store/interviewStore.ts",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "role_successor",
+      "target": "concept_legacy_trust",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 439",
+      "weight": 0.9
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "interview_subsystem",
+      "label": "Interview & AI Subsystem",
+      "nodes": [
+        "tech_gemini",
+        "logic_stream_proxy",
+        "store_interview",
+        "logic_create_sessions"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9,
+      "source_file": "server.ts"
+    },
+    {
+      "id": "auth_subsystem",
+      "label": "Authentication & Security",
+      "nodes": [
+        "tech_bun",
+        "schema_auth",
+        "store_auth"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "server.ts"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

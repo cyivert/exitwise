@@ -1,0 +1,190 @@
+{
+  "nodes": [
+    {
+      "id": "file_favicon",
+      "label": "favicon.svg",
+      "file_type": "image",
+      "source_file": "public/favicon.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_icons",
+      "label": "icons.svg",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_bluesky",
+      "label": "Bluesky Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "bluesky-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_discord",
+      "label": "Discord Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "discord-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_documentation",
+      "label": "Documentation Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "documentation-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_github",
+      "label": "GitHub Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "github-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_social",
+      "label": "Social Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "social-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_x",
+      "label": "X Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "x-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_hero",
+      "label": "hero.png",
+      "file_type": "image",
+      "source_file": "src/assets/hero.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_react",
+      "label": "react.svg",
+      "file_type": "image",
+      "source_file": "src/assets/react.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_vite",
+      "label": "vite.svg",
+      "file_type": "image",
+      "source_file": "src/assets/vite.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "file_icons",
+      "target": "icon_bluesky",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_discord",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_documentation",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_github",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_social",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_x",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -204,14 +204,24 @@ Bun.serve({
   port: port,
   async fetch(req) {
     const url = new URL(req.url);
+    const origin = req.headers.get("origin") || "*";
     
-    // security headers.
+    // security + CORS headers.
     const headers = new Headers({
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
       "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8080 https://exitwise.app; object-src 'none';",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     });
+
+    // handle preflight
+    if (req.method === "OPTIONS") {
+      return new Response(null, { headers });
+    }
 
     // api routes.
     if (url.pathname.startsWith("/api")) {

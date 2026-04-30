@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import KnowledgeCard from '../../components/shared/KnowledgeCard';
 import { Search } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../config/constants';
 
 export default function ProfilePage() {
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Processes');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,7 +55,17 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="relative w-full md:w-96">
+          <div className="flex flex-col items-end space-y-4">
+            <button 
+              onClick={() => {
+                useAuthStore.getState().clearAuth();
+                navigate(ROUTES.LOGIN);
+              }}
+              className="text-sm uppercase tracking-widest text-green-pale hover:text-white transition-colors"
+            >
+              Logout
+            </button>
+            <div className="relative w-full md:w-96">
             <input
               type="text"
               value={searchQuery}
@@ -61,7 +76,8 @@ export default function ProfilePage() {
             <Search className="absolute right-4 top-3.5 text-green-pale w-5 h-5" />
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <div className="max-w-7xl mx-auto flex py-12 px-8">
         {/* Left Nav */}

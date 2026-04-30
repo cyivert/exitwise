@@ -1,0 +1,316 @@
+{
+  "communities": {
+    "0": [
+      "exitwise_server_buildfallbackexperiencetitle",
+      "exitwise_server_checkratelimit",
+      "exitwise_server_createexperienceforretiree",
+      "exitwise_server_createexperiencesessions",
+      "exitwise_server_fetch",
+      "exitwise_server_generateexperiencetitle",
+      "exitwise_server_getorganizationadmincontext",
+      "exitwise_server_normalizecontexttext",
+      "exitwise_server_verifytoken",
+      "server_ts",
+      "services_api_apifetch",
+      "src_services_api_ts"
+    ],
+    "1": [
+      "src_utils_helpers_ts",
+      "utils_helpers_cn",
+      "utils_helpers_formatdate",
+      "utils_helpers_getinitials",
+      "utils_helpers_getquestionprogression",
+      "utils_helpers_getsessionfallbackquestion",
+      "utils_helpers_getsessionfollowupquestions",
+      "utils_helpers_normalizesessionfocus",
+      "utils_helpers_truncate"
+    ],
+    "2": [
+      "dashboard_dashboardpage_handleaddexperience",
+      "dashboard_dashboardpage_handlecreatemember",
+      "dashboard_dashboardpage_handledeleteexperience",
+      "dashboard_dashboardpage_handledeletemember",
+      "dashboard_dashboardpage_handlerelease",
+      "dashboard_dashboardpage_handlerenameexperiencetitle",
+      "dashboard_dashboardpage_loadselectedsessions",
+      "src_features_dashboard_dashboardpage_tsx"
+    ],
+    "3": [
+      "file_icons",
+      "icon_bluesky",
+      "icon_discord",
+      "icon_documentation",
+      "icon_github",
+      "icon_social",
+      "icon_x"
+    ],
+    "4": [
+      "interview_interviewpage_groupsessionexchanges",
+      "interview_interviewpage_handlecontinue",
+      "interview_interviewpage_loadsession",
+      "src_features_interview_interviewpage_tsx",
+      "utils_helpers_ismeaningfulfollowup",
+      "utils_helpers_normalizeinterviewtext"
+    ],
+    "5": [
+      "src_app_app",
+      "src_app_tsx",
+      "src_main_tsx"
+    ],
+    "6": [
+      "concept_legacy_trust",
+      "role_retiree",
+      "role_successor"
+    ],
+    "7": [
+      "logic_generate_title",
+      "tech_bun",
+      "tech_gemini"
+    ],
+    "8": [
+      "shared_protectedroute_protectedroute",
+      "src_components_shared_protectedroute_tsx"
+    ],
+    "9": [
+      "auth_loginpage_loginpage",
+      "src_features_auth_loginpage_tsx"
+    ],
+    "10": [
+      "auth_signuppage_handlesubmit",
+      "src_features_auth_signuppage_tsx"
+    ],
+    "11": [
+      "landing_landingpage_landingpage",
+      "src_features_landing_landingpage_tsx"
+    ],
+    "12": [
+      "app_exitwise",
+      "concept_tacit_knowledge"
+    ],
+    "13": [
+      "logic_create_sessions",
+      "store_interview"
+    ],
+    "14": [
+      "eslint_config_js"
+    ],
+    "15": [
+      "vite_config_ts"
+    ],
+    "16": [
+      "src_components_shared_knowledgecard_tsx"
+    ],
+    "17": [
+      "src_config_constants_ts"
+    ],
+    "18": [
+      "src_config_env_ts"
+    ],
+    "19": [
+      "src_database_db_ts"
+    ],
+    "20": [
+      "src_features_profile_profilepage_tsx"
+    ],
+    "21": [
+      "src_schemas_auth_ts"
+    ],
+    "22": [
+      "src_services_gemini_ts"
+    ],
+    "23": [
+      "src_store_authstore_ts"
+    ],
+    "24": [
+      "src_store_interviewstore_ts"
+    ],
+    "25": [
+      "src_types_index_ts"
+    ],
+    "26": [
+      "file_favicon"
+    ],
+    "27": [
+      "file_hero"
+    ],
+    "28": [
+      "file_react"
+    ],
+    "29": [
+      "file_vite"
+    ]
+  },
+  "cohesion": {
+    "0": 0.29,
+    "1": 0.33,
+    "2": 0.25,
+    "3": 0.29,
+    "4": 0.53,
+    "5": 0.67,
+    "6": 0.67,
+    "7": 0.67,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0
+  },
+  "gods": [
+    {
+      "id": "exitwise_server_fetch",
+      "label": "fetch()",
+      "degree": 7
+    },
+    {
+      "id": "utils_helpers_getquestionprogression",
+      "label": "getQuestionProgression()",
+      "degree": 5
+    },
+    {
+      "id": "exitwise_server_generateexperiencetitle",
+      "label": "generateExperienceTitle()",
+      "degree": 4
+    },
+    {
+      "id": "interview_interviewpage_loadsession",
+      "label": "loadSession()",
+      "degree": 4
+    },
+    {
+      "id": "interview_interviewpage_handlecontinue",
+      "label": "handleContinue()",
+      "degree": 4
+    },
+    {
+      "id": "utils_helpers_normalizeinterviewtext",
+      "label": "normalizeInterviewText()",
+      "degree": 4
+    },
+    {
+      "id": "utils_helpers_ismeaningfulfollowup",
+      "label": "isMeaningfulFollowUp()",
+      "degree": 4
+    },
+    {
+      "id": "exitwise_server_createexperienceforretiree",
+      "label": "createExperienceForRetiree()",
+      "degree": 3
+    },
+    {
+      "id": "utils_helpers_normalizesessionfocus",
+      "label": "normalizeSessionFocus()",
+      "degree": 3
+    },
+    {
+      "id": "utils_helpers_getsessionfallbackquestion",
+      "label": "getSessionFallbackQuestion()",
+      "degree": 3
+    }
+  ],
+  "surprises": [
+    {
+      "source": "apiFetch()",
+      "target": "fetch()",
+      "source_files": [
+        "src\\services\\api.ts",
+        "server.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `apiFetch()` unexpectedly reaches hub `fetch()`"
+    },
+    {
+      "source": "loadSession()",
+      "target": "getQuestionProgression()",
+      "source_files": [
+        "src\\features\\interview\\InterviewPage.tsx",
+        "src\\utils\\helpers.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "handleContinue()",
+      "target": "getQuestionProgression()",
+      "source_files": [
+        "src\\features\\interview\\InterviewPage.tsx",
+        "src\\utils\\helpers.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "loadSession()",
+      "target": "isMeaningfulFollowUp()",
+      "source_files": [
+        "src\\features\\interview\\InterviewPage.tsx",
+        "src\\utils\\helpers.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "loadSession()",
+      "target": "normalizeInterviewText()",
+      "source_files": [
+        "src\\features\\interview\\InterviewPage.tsx",
+        "src\\utils\\helpers.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `getQuestionProgression()` connect `Community 1` to `Community 4`?",
+      "why": "High betweenness centrality (0.006) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `loadSession()` connect `Community 4` to `Community 1`?",
+      "why": "High betweenness centrality (0.004) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 2 inferred relationships involving `getQuestionProgression()` (e.g. with `loadSession()` and `handleContinue()`) actually correct?",
+      "why": "`getQuestionProgression()` has 2 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 3 inferred relationships involving `loadSession()` (e.g. with `isMeaningfulFollowUp()` and `getQuestionProgression()`) actually correct?",
+      "why": "`loadSession()` has 3 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 3 inferred relationships involving `handleContinue()` (e.g. with `normalizeInterviewText()` and `getQuestionProgression()`) actually correct?",
+      "why": "`handleContinue()` has 3 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `ExitWise Application`, `Tacit Knowledge`, `Bun Server` to the rest of the system?",
+      "why": "14 weakly-connected nodes found - possible documentation gaps or missing edges."
+    }
+  ]
+}

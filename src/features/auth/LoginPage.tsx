@@ -29,6 +29,7 @@ export default function LoginPage() {
     
     if (result.data) {
       setAuth(result.data.user, result.data.token);
+      alert(`Welcome back, ${result.data.user.full_name}!`);
       navigate(ROUTES.DASHBOARD);
     } else {
       setError(result.error || 'Login failed');

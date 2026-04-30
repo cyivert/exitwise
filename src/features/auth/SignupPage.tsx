@@ -50,6 +50,7 @@ export default function SignupPage() {
 
     if (result.data) {
       setAuth(result.data.user, result.data.token);
+      alert(`Welcome to ExitWise, ${result.data.user.full_name}!`);
       navigate(ROUTES.DASHBOARD);
     } else {
       setError(result.error || 'Signup failed');

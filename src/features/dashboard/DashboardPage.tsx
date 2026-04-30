@@ -171,6 +171,15 @@ export default function DashboardPage() {
           <div className="w-8 h-8 rounded-full bg-amber flex items-center justify-center text-white text-xs font-bold">
             {user.full_name.split(' ').map(n => n[0]).join('')}
           </div>
+          <button 
+            onClick={() => {
+              useAuthStore.getState().clearAuth();
+              navigate(ROUTES.LOGIN);
+            }}
+            className="text-xs uppercase tracking-widest text-green-pale hover:text-white transition-colors ml-2"
+          >
+            Logout
+          </button>
         </div>
       </nav>
 

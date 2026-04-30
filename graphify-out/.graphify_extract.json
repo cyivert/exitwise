@@ -1,0 +1,2034 @@
+{
+  "nodes": [
+    {
+      "id": "eslint_config_js",
+      "label": "eslint.config.js",
+      "file_type": "code",
+      "source_file": "eslint.config.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "server_ts",
+      "label": "server.ts",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "exitwise_server_checkratelimit",
+      "label": "checkRateLimit()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L22"
+    },
+    {
+      "id": "exitwise_server_verifytoken",
+      "label": "verifyToken()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L36"
+    },
+    {
+      "id": "exitwise_server_normalizecontexttext",
+      "label": "normalizeContextText()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L45"
+    },
+    {
+      "id": "exitwise_server_createexperiencesessions",
+      "label": "createExperienceSessions()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L59"
+    },
+    {
+      "id": "exitwise_server_createexperienceforretiree",
+      "label": "createExperienceForRetiree()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L74"
+    },
+    {
+      "id": "exitwise_server_getorganizationadmincontext",
+      "label": "getOrganizationAdminContext()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L85"
+    },
+    {
+      "id": "exitwise_server_buildfallbackexperiencetitle",
+      "label": "buildFallbackExperienceTitle()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L108"
+    },
+    {
+      "id": "exitwise_server_generateexperiencetitle",
+      "label": "generateExperienceTitle()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L129"
+    },
+    {
+      "id": "exitwise_server_fetch",
+      "label": "fetch()",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "L205"
+    },
+    {
+      "id": "vite_config_ts",
+      "label": "vite.config.ts",
+      "file_type": "code",
+      "source_file": "vite.config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_tsx",
+      "label": "App.tsx",
+      "file_type": "code",
+      "source_file": "src\\App.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_app",
+      "label": "App()",
+      "file_type": "code",
+      "source_file": "src\\App.tsx",
+      "source_location": "L11"
+    },
+    {
+      "id": "src_main_tsx",
+      "label": "main.tsx",
+      "file_type": "code",
+      "source_file": "src\\main.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_shared_knowledgecard_tsx",
+      "label": "KnowledgeCard.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\shared\\KnowledgeCard.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_shared_protectedroute_tsx",
+      "label": "ProtectedRoute.tsx",
+      "file_type": "code",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "shared_protectedroute_protectedroute",
+      "label": "ProtectedRoute()",
+      "file_type": "code",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L11"
+    },
+    {
+      "id": "src_config_constants_ts",
+      "label": "constants.ts",
+      "file_type": "code",
+      "source_file": "src\\config\\constants.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_config_env_ts",
+      "label": "env.ts",
+      "file_type": "code",
+      "source_file": "src\\config\\env.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_database_db_ts",
+      "label": "db.ts",
+      "file_type": "code",
+      "source_file": "src\\database\\db.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_features_auth_loginpage_tsx",
+      "label": "LoginPage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "auth_loginpage_loginpage",
+      "label": "LoginPage()",
+      "file_type": "code",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L8"
+    },
+    {
+      "id": "src_features_auth_signuppage_tsx",
+      "label": "SignupPage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "auth_signuppage_handlesubmit",
+      "label": "handleSubmit()",
+      "file_type": "code",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L22"
+    },
+    {
+      "id": "src_features_dashboard_dashboardpage_tsx",
+      "label": "DashboardPage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "dashboard_dashboardpage_loadselectedsessions",
+      "label": "loadSelectedSessions()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L38"
+    },
+    {
+      "id": "dashboard_dashboardpage_handlerelease",
+      "label": "handleRelease()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L58"
+    },
+    {
+      "id": "dashboard_dashboardpage_handlecreatemember",
+      "label": "handleCreateMember()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L76"
+    },
+    {
+      "id": "dashboard_dashboardpage_handledeletemember",
+      "label": "handleDeleteMember()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L97"
+    },
+    {
+      "id": "dashboard_dashboardpage_handleaddexperience",
+      "label": "handleAddExperience()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L106"
+    },
+    {
+      "id": "dashboard_dashboardpage_handledeleteexperience",
+      "label": "handleDeleteExperience()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L126"
+    },
+    {
+      "id": "dashboard_dashboardpage_handlerenameexperiencetitle",
+      "label": "handleRenameExperienceTitle()",
+      "file_type": "code",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L146"
+    },
+    {
+      "id": "src_features_interview_interviewpage_tsx",
+      "label": "InterviewPage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "interview_interviewpage_groupsessionexchanges",
+      "label": "groupSessionExchanges()",
+      "file_type": "code",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L11"
+    },
+    {
+      "id": "interview_interviewpage_loadsession",
+      "label": "loadSession()",
+      "file_type": "code",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L56"
+    },
+    {
+      "id": "interview_interviewpage_handlecontinue",
+      "label": "handleContinue()",
+      "file_type": "code",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L125"
+    },
+    {
+      "id": "src_features_landing_landingpage_tsx",
+      "label": "LandingPage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\landing\\LandingPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "landing_landingpage_landingpage",
+      "label": "LandingPage()",
+      "file_type": "code",
+      "source_file": "src\\features\\landing\\LandingPage.tsx",
+      "source_location": "L4"
+    },
+    {
+      "id": "src_features_profile_profilepage_tsx",
+      "label": "ProfilePage.tsx",
+      "file_type": "code",
+      "source_file": "src\\features\\profile\\ProfilePage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_schemas_auth_ts",
+      "label": "auth.ts",
+      "file_type": "code",
+      "source_file": "src\\schemas\\auth.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_services_api_ts",
+      "label": "api.ts",
+      "file_type": "code",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_api_apifetch",
+      "label": "apiFetch()",
+      "file_type": "code",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L6"
+    },
+    {
+      "id": "src_services_gemini_ts",
+      "label": "gemini.ts",
+      "file_type": "code",
+      "source_file": "src\\services\\gemini.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_store_authstore_ts",
+      "label": "authStore.ts",
+      "file_type": "code",
+      "source_file": "src\\store\\authStore.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_store_interviewstore_ts",
+      "label": "interviewStore.ts",
+      "file_type": "code",
+      "source_file": "src\\store\\interviewStore.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_types_index_ts",
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "src\\types\\index.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_utils_helpers_ts",
+      "label": "helpers.ts",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "utils_helpers_cn",
+      "label": "cn()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L5"
+    },
+    {
+      "id": "utils_helpers_formatdate",
+      "label": "formatDate()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L9"
+    },
+    {
+      "id": "utils_helpers_truncate",
+      "label": "truncate()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L17"
+    },
+    {
+      "id": "utils_helpers_getinitials",
+      "label": "getInitials()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L21"
+    },
+    {
+      "id": "utils_helpers_normalizeinterviewtext",
+      "label": "normalizeInterviewText()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L29"
+    },
+    {
+      "id": "utils_helpers_ismeaningfulfollowup",
+      "label": "isMeaningfulFollowUp()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L43"
+    },
+    {
+      "id": "utils_helpers_normalizesessionfocus",
+      "label": "normalizeSessionFocus()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L53"
+    },
+    {
+      "id": "utils_helpers_getsessionfallbackquestion",
+      "label": "getSessionFallbackQuestion()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L57"
+    },
+    {
+      "id": "utils_helpers_getsessionfollowupquestions",
+      "label": "getSessionFollowUpQuestions()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L71"
+    },
+    {
+      "id": "utils_helpers_getquestionprogression",
+      "label": "getQuestionProgression()",
+      "file_type": "code",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L110"
+    },
+    {
+      "id": "app_exitwise",
+      "label": "ExitWise Application",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_legacy_trust",
+      "label": "Legacy Trust\u2122 Control",
+      "file_type": "code",
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 424",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "concept_tacit_knowledge",
+      "label": "Tacit Knowledge",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_bun",
+      "label": "Bun Server",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 1",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_gemini",
+      "label": "Google Gemini AI",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 3",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "logic_create_sessions",
+      "label": "createExperienceSessions",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 55",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "logic_generate_title",
+      "label": "generateExperienceTitle",
+      "file_type": "code",
+      "source_file": "server.ts",
+      "source_location": "line 117",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "store_interview",
+      "label": "useInterviewStore",
+      "file_type": "code",
+      "source_file": "src/store/interviewStore.ts",
+      "source_location": "line 24",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_retiree",
+      "label": "Retiree Role",
+      "file_type": "code",
+      "source_file": "src/types/index.ts",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "role_successor",
+      "label": "Successor Role",
+      "file_type": "code",
+      "source_file": "src/types/index.ts",
+      "source_location": "line 2",
+      "source_url": null,
+      "captured_at": "2024-05-24T00:00:00Z",
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_favicon",
+      "label": "favicon.svg",
+      "file_type": "image",
+      "source_file": "public/favicon.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_icons",
+      "label": "icons.svg",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_bluesky",
+      "label": "Bluesky Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "bluesky-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_discord",
+      "label": "Discord Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "discord-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_documentation",
+      "label": "Documentation Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "documentation-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_github",
+      "label": "GitHub Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "github-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_social",
+      "label": "Social Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "social-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "icon_x",
+      "label": "X Icon",
+      "file_type": "image",
+      "source_file": "public/icons.svg",
+      "source_location": "x-icon",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_hero",
+      "label": "hero.png",
+      "file_type": "image",
+      "source_file": "src/assets/hero.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_react",
+      "label": "react.svg",
+      "file_type": "image",
+      "source_file": "src/assets/react.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "file_vite",
+      "label": "vite.svg",
+      "file_type": "image",
+      "source_file": "src/assets/vite.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "eslint_config_js",
+      "target": "js",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "eslint_config_js",
+      "target": "globals",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "eslint_config_js",
+      "target": "eslint_plugin_react_hooks",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "eslint_config_js",
+      "target": "eslint_plugin_react_refresh",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "eslint_config_js",
+      "target": "typescript_eslint",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "eslint_config_js",
+      "target": "config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "eslint.config.js",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "path",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "jsonwebtoken",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "generative_ai",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_database_db",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "zod",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_schemas_auth",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_checkratelimit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_verifytoken",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_normalizecontexttext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_createexperiencesessions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_createexperienceforretiree",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_getorganizationadmincontext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_buildfallbackexperiencetitle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_generateexperiencetitle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "server_ts",
+      "target": "exitwise_server_fetch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_createexperienceforretiree",
+      "target": "exitwise_server_createexperiencesessions",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_generateexperiencetitle",
+      "target": "exitwise_server_normalizecontexttext",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_generateexperiencetitle",
+      "target": "exitwise_server_buildfallbackexperiencetitle",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_fetch",
+      "target": "exitwise_server_checkratelimit",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L241",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_fetch",
+      "target": "exitwise_server_createexperienceforretiree",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L303",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_fetch",
+      "target": "exitwise_server_verifytoken",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L318",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_fetch",
+      "target": "exitwise_server_getorganizationadmincontext",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L350",
+      "weight": 1.0
+    },
+    {
+      "source": "exitwise_server_fetch",
+      "target": "exitwise_server_generateexperiencetitle",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "server.ts",
+      "source_location": "L469",
+      "weight": 1.0
+    },
+    {
+      "source": "vite_config_ts",
+      "target": "vite",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vite.config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "vite_config_ts",
+      "target": "plugin_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vite.config.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "vite_config_ts",
+      "target": "vite",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "vite.config.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_landing_landingpage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_auth_loginpage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_auth_signuppage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_dashboard_dashboardpage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_interview_interviewpage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_features_profile_profilepage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_components_shared_protectedroute",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_tsx",
+      "target": "src_app_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\App.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\main.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main_tsx",
+      "target": "client",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\main.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_index_css",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\main.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main_tsx",
+      "target": "src_app_tsx",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\main.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_knowledgecard_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\KnowledgeCard.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_knowledgecard_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\KnowledgeCard.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_protectedroute_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_protectedroute_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_protectedroute_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_shared_protectedroute_tsx",
+      "target": "shared_protectedroute_protectedroute",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\components\\shared\\ProtectedRoute.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_config_constants_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\config\\constants.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_config_env_ts",
+      "target": "zod",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\config\\env.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_database_db_ts",
+      "target": "postgres",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\database\\db.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_services_api",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_schemas_auth",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_loginpage_tsx",
+      "target": "auth_loginpage_loginpage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\LoginPage.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_services_api",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_schemas_auth",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_auth_signuppage_tsx",
+      "target": "auth_signuppage_handlesubmit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\auth\\SignupPage.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_services_api",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_loadselectedsessions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handlerelease",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handlecreatemember",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handledeletemember",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handleaddexperience",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handledeleteexperience",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L126",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_handlerenameexperiencetitle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\dashboard\\DashboardPage.tsx",
+      "source_location": "L146",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_interviewstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_services_gemini",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_services_api",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_utils_helpers",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "interview_interviewpage_groupsessionexchanges",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "interview_interviewpage_loadsession",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_interview_interviewpage_tsx",
+      "target": "interview_interviewpage_handlecontinue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L125",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_landing_landingpage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_constants",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\landing\\LandingPage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_landing_landingpage_tsx",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\landing\\LandingPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_landing_landingpage_tsx",
+      "target": "landing_landingpage_landingpage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\landing\\LandingPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_profile_profilepage_tsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\profile\\ProfilePage.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_profile_profilepage_tsx",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_components_shared_knowledgecard",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\profile\\ProfilePage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_features_profile_profilepage_tsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\features\\profile\\ProfilePage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_schemas_auth_ts",
+      "target": "zod",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\schemas\\auth.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_api_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_api_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_env",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_api_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_api_ts",
+      "target": "services_api_apifetch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_gemini_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_config_env",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\gemini.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_services_gemini_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_store_authstore",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\services\\gemini.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_authstore_ts",
+      "target": "zustand",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\authStore.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_authstore_ts",
+      "target": "middleware",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\authStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_authstore_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\authStore.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_interviewstore_ts",
+      "target": "zustand",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\interviewStore.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_interviewstore_ts",
+      "target": "middleware",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\interviewStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_store_interviewstore_ts",
+      "target": "c_users_asus_pro_documents_code_exit_wise_proj_exitwise_src_types",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\store\\interviewStore.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "clsx",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "tailwind_merge",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_cn",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_formatdate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_truncate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_getinitials",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_normalizeinterviewtext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_ismeaningfulfollowup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_normalizesessionfocus",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_getsessionfallbackquestion",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_getsessionfollowupquestions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "src_utils_helpers_ts",
+      "target": "utils_helpers_getquestionprogression",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_helpers_ismeaningfulfollowup",
+      "target": "utils_helpers_normalizeinterviewtext",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_helpers_getsessionfallbackquestion",
+      "target": "utils_helpers_normalizesessionfocus",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_helpers_getsessionfollowupquestions",
+      "target": "utils_helpers_normalizesessionfocus",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_helpers_getquestionprogression",
+      "target": "utils_helpers_getsessionfollowupquestions",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_helpers_getquestionprogression",
+      "target": "utils_helpers_getsessionfallbackquestion",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\utils\\helpers.ts",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_loadsession",
+      "target": "utils_helpers_ismeaningfulfollowup",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_loadsession",
+      "target": "utils_helpers_getquestionprogression",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_loadsession",
+      "target": "utils_helpers_normalizeinterviewtext",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_handlecontinue",
+      "target": "utils_helpers_normalizeinterviewtext",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_handlecontinue",
+      "target": "utils_helpers_getquestionprogression",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L178",
+      "weight": 1.0
+    },
+    {
+      "source": "interview_interviewpage_handlecontinue",
+      "target": "utils_helpers_ismeaningfulfollowup",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\features\\interview\\InterviewPage.tsx",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "services_api_apifetch",
+      "target": "exitwise_server_fetch",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src\\services\\api.ts",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "tech_bun",
+      "target": "tech_gemini",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.ts",
+      "source_location": "line 179",
+      "weight": 1.0
+    },
+    {
+      "source": "logic_generate_title",
+      "target": "tech_gemini",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server.ts",
+      "source_location": "line 180",
+      "weight": 1.0
+    },
+    {
+      "source": "app_exitwise",
+      "target": "concept_tacit_knowledge",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "concept_legacy_trust",
+      "target": "role_retiree",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 425",
+      "weight": 0.8
+    },
+    {
+      "source": "store_interview",
+      "target": "logic_create_sessions",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/store/interviewStore.ts",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "role_successor",
+      "target": "concept_legacy_trust",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "line 439",
+      "weight": 0.9
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_bluesky",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_discord",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_documentation",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_github",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_social",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "file_icons",
+      "target": "icon_x",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "public/icons.svg",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "interview_subsystem",
+      "label": "Interview & AI Subsystem",
+      "nodes": [
+        "tech_gemini",
+        "logic_stream_proxy",
+        "store_interview",
+        "logic_create_sessions"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.9,
+      "source_file": "server.ts"
+    },
+    {
+      "id": "auth_subsystem",
+      "label": "Authentication & Security",
+      "nodes": [
+        "tech_bun",
+        "schema_auth",
+        "store_auth"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "server.ts"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
