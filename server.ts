@@ -70,7 +70,7 @@ async function generateGeminiStream(prompt: string | string[]) {
     throw new Error('AI configuration missing');
   }
 
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
   let lastError: unknown = null;
 
   for (const modelName of models) {
@@ -204,7 +204,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
 
   try {
     if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await model.generateContent(prompt);
       const generatedText = result.response.text().trim();
       cleanedTitle = normalizeContextText(generatedText)
