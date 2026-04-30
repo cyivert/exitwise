@@ -897,7 +897,7 @@ Bun.serve({
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
 
-        if (!genAI && !ANTHROPIC_API_KEY) return new Response("AI configuration missing", { status: 500 });
+        if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
           const { sessionId, userResponse } = await req.json();
@@ -1110,7 +1110,7 @@ Bun.serve({
       if (url.pathname === "/api/successor/stream" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
-        if (!genAI && !ANTHROPIC_API_KEY) return new Response("AI configuration missing", { status: 500 });
+        if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
           const { chatId, engagementId, message } = await req.json();
