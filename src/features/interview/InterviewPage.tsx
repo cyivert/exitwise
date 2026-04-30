@@ -263,7 +263,6 @@ export default function InterviewPage() {
           {sessionList.map((session) => {
             const isCurrent = session.id === sessionId;
             const isComplete = session.status === 'complete';
-            const isPending = !isComplete && !isCurrent;
             const isClickable = isComplete && !isCurrent;
 
             const badge = isComplete
