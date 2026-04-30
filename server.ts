@@ -54,6 +54,37 @@ function normalizeContextText(text: string) {
     .trim();
 }
 
+function limitText(text: string, maxChars: number) {
+  if (!text) return '';
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+function asSafeText(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return normalizeContextText(value);
+}
+
+async function generateGeminiStream(prompt: string | string[]) {
+  if (!genAI) {
+    throw new Error('AI configuration missing');
+  }
+
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      return await model.generateContentStream(prompt);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to generate Gemini response');
+}
+
 const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
 
 async function createExperienceSessions(engagementId: string, orgId: string, retireeId: string) {
@@ -751,13 +782,15 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream([prompt, userResponse]);
+          const result = await generateGeminiStream([prompt, userResponse]);
 
           const stream = new ReadableStream({
             async start(controller) {
               for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
               }
               controller.close();
             },
@@ -909,9 +942,18 @@ Bun.serve({
         try {
           const { chatId, engagementId, message } = await req.json();
 
+          if (typeof chatId !== 'string' || typeof engagementId !== 'string' || typeof message !== 'string') {
+            return new Response(JSON.stringify({ message: 'Invalid payload' }), { status: 400, headers: apiHeaders });
+          }
+
+          const safeMessage = normalizeContextText(message);
+          if (!safeMessage) {
+            return new Response(JSON.stringify({ message: 'Message is required' }), { status: 400, headers: apiHeaders });
+          }
+
           const [chat] = await sql`
             SELECT * FROM successor_chats
-            WHERE id = ${chatId} AND successor_id = ${decoded.sub} AND status = 'active'
+            WHERE id = ${chatId} AND successor_id = ${decoded.sub} AND engagement_id = ${engagementId} AND status = 'active'
           `;
           if (!chat) return new Response("Chat not found or already confirmed", { status: 404 });
 
@@ -929,6 +971,7 @@ Bun.serve({
             FROM knowledge_profiles
             WHERE engagement_id = ${engagementId}
             ORDER BY section ASC
+            LIMIT 40
           `;
 
           const interviewExchanges = await sql`
@@ -937,6 +980,7 @@ Bun.serve({
             JOIN interview_sessions s ON s.id = x.session_id
             WHERE s.engagement_id = ${engagementId} AND x.response_text IS NOT NULL
             ORDER BY s.session_number ASC, x.sequence_order ASC
+            LIMIT 72
           `;
 
           const recentMessages = await sql`
@@ -947,15 +991,42 @@ Bun.serve({
           `;
 
           const profileContext = knowledgeProfiles.length > 0
-            ? knowledgeProfiles.map((p: any) => `[${p.section.toUpperCase()}] ${p.title}\n${normalizeContextText(p.content)}${p.quote ? `\nQuote: "${normalizeContextText(p.quote)}"` : ''}`).join('\n\n')
+            ? limitText(
+                knowledgeProfiles
+                  .map((p: any) => {
+                    const section = asSafeText(p.section || 'general').toUpperCase() || 'GENERAL';
+                    const title = asSafeText(p.title) || 'Untitled';
+                    const content = asSafeText(p.content) || 'No content captured.';
+                    const quote = asSafeText(p.quote);
+                    return `[${section}] ${title}\n${content}${quote ? `\nQuote: "${quote}"` : ''}`;
+                  })
+                  .join('\n\n'),
+                12000,
+              )
             : 'No structured knowledge profiles captured yet.';
 
           const exchangeContext = interviewExchanges.length > 0
-            ? interviewExchanges.map((x: any, i: number) => `Session ${x.session_number} (${x.session_focus}) Q${i + 1}: ${normalizeContextText(x.question_text)}\nAnswer: ${normalizeContextText(x.response_text)}`).join('\n\n')
+            ? limitText(
+                interviewExchanges
+                  .map((x: any, i: number) => {
+                    const sessionNumber = Number.isFinite(Number(x.session_number)) ? Number(x.session_number) : '?';
+                    const focus = asSafeText(x.session_focus) || 'unspecified';
+                    const question = asSafeText(x.question_text) || 'No question captured.';
+                    const answer = asSafeText(x.response_text) || 'No answer captured.';
+                    return `Session ${sessionNumber} (${focus}) Q${i + 1}: ${question}\nAnswer: ${answer}`;
+                  })
+                  .join('\n\n'),
+                16000,
+              )
             : 'No interview transcript available.';
 
           const chatHistoryContext = recentMessages.length > 0
-            ? recentMessages.map((m: any) => `${m.role === 'user' ? 'Successor' : 'AI'}: ${m.content}`).join('\n')
+            ? limitText(
+                recentMessages
+                  .map((m: any) => `${m.role === 'user' ? 'Successor' : 'AI'}: ${asSafeText(m.content)}`)
+                  .join('\n'),
+                5000,
+              )
             : '';
 
           const prompt = `You are ExitWise AI, a knowledge access assistant helping a successor employee learn from a retiring colleague's captured institutional knowledge.
@@ -974,15 +1045,17 @@ ${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}INS
 - Be specific and practical for the successor
 - Output plain text only. No HTML, markdown, or formatting symbols.
 
-Successor's question: ${message}`;
+Successor's question: ${safeMessage}`;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream(prompt);
+          const result = await generateGeminiStream(prompt);
 
           const stream = new ReadableStream({
             async start(controller) {
               for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
               }
               controller.close();
             },
@@ -991,7 +1064,8 @@ Successor's question: ${message}`;
           return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
           console.error('[successor/stream]', e);
-          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+          const message = typeof e?.message === 'string' && e.message ? e.message : 'AI stream failed';
+          return new Response(JSON.stringify({ message }), { status: 500, headers: apiHeaders });
         }
       }
 

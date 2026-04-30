@@ -93,7 +93,17 @@ export default function KnowledgeChatPage() {
       await successorChatService.saveMessage({ chat_id: chat.id, role: 'assistant', content: fullResponse });
       setMessages(prev => [...prev, assistantMessage]);
       setStreamingText('');
-    } catch {
+    } catch (error) {
+      const fallbackMessage = "I couldn't generate a response right now. Please try again.";
+      const content = error instanceof Error && error.message ? error.message : fallbackMessage;
+      const assistantErrorMessage: SuccessorChatMessage = {
+        id: crypto.randomUUID(),
+        chat_id: chat.id,
+        role: 'assistant',
+        content,
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, assistantErrorMessage]);
       setStreamingText('');
     } finally {
       setIsStreaming(false);
