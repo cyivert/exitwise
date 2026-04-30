@@ -8,16 +8,259 @@ import { loginSchema, signupSchema } from "./src/schemas/auth";
 // Railway/Bun entry point. dynamic port + security.
 const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
-const JWT_SECRET = process.env.JWT_SECRET;
+const jwtSecret = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/messages';
 
-if (!JWT_SECRET) {
+if (!jwtSecret) {
   throw new Error("JWT_SECRET is required");
 }
 
+const JWT_SECRET: string = jwtSecret;
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const useDemoApi = DATABASE_URL.includes(".railway.internal") && !process.env.RAILWAY_ENVIRONMENT;
+
+type DemoUser = {
+  id: string;
+  org_id: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  role: string;
+  job_title?: string | null;
+  years_exp?: number | null;
+  created_at: string;
+};
+
+type ExchangePayload = {
+  id: string;
+  session_id: string;
+  question_text: string;
+  question_type: string;
+  response_text?: string | null;
+  ai_follow_up?: string | null;
+  sequence_order?: number;
+};
+
+type OrgMemberPayload = {
+  full_name: string;
+  email: string;
+  password: string;
+  role: string;
+  job_title?: string | null;
+  years_exp?: number | null;
+};
+
+type ReleaseDatePayload = {
+  release_date: string;
+  engagement_id?: string;
+};
+
+type InterviewStreamPayload = {
+  sessionId: string;
+  userResponse: string;
+};
+
+type SuccessorChatMessagePayload = {
+  chat_id: string;
+  role: string;
+  content: string;
+};
+
+type SuccessorStreamPayload = {
+  chatId: string;
+  engagementId: string;
+  message: string;
+};
+
+const demoOrg = {
+  id: "demo-org",
+  name: "Local Demo Organization",
+  industry: "other",
+  invite_code: "DEMO2026",
+};
+
+const demoUsers = new Map<string, DemoUser>();
+const demoExperiences = new Map<string, any>();
+const demoSessions = new Map<string, any>();
+const demoExchanges = new Map<string, any[]>();
+
+function safeJson(data: unknown, headers: Headers, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers,
+  });
+}
+
+function toSafeUser(user: DemoUser) {
+  return {
+    id: user.id,
+    org_id: user.org_id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    job_title: user.job_title,
+    years_exp: user.years_exp,
+    created_at: user.created_at,
+  };
+}
+
+function makeDemoExperience(user: DemoUser) {
+  const existing = [...demoExperiences.values()].find((experience) => experience.retiree_id === user.id);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const engagement = {
+    id: crypto.randomUUID(),
+    org_id: user.org_id,
+    retiree_id: user.id,
+    successor_id: null,
+    title: `${user.job_title || "Retiree"} Knowledge Transfer`,
+    status: "active",
+    release_date: null,
+    transcript: [],
+    created_at: now,
+    updated_at: now,
+  };
+
+  demoExperiences.set(engagement.id, engagement);
+  SESSION_FOCUS_SEQUENCE.forEach((session_focus, index) => {
+    const session = {
+      id: crypto.randomUUID(),
+      engagement_id: engagement.id,
+      org_id: user.org_id,
+      retiree_id: user.id,
+      session_number: index + 1,
+      session_focus,
+      status: index === 0 ? "active" : "pending",
+      running_summary: [],
+      created_at: now,
+    };
+    demoSessions.set(session.id, session);
+    demoExchanges.set(session.id, []);
+  });
+
+  return engagement;
+}
+
+async function handleDemoApi(req: Request, url: URL, headers: Headers) {
+  if (!useDemoApi) return null;
+
+  const decoded = verifyToken(req.headers.get("Authorization"));
+
+  if (url.pathname === "/api/auth/signup" && req.method === "POST") {
+    const validated = signupSchema.parse(await req.json());
+    const existing = demoUsers.get(validated.email.toLowerCase());
+    if (existing) return safeJson({ message: "Email already exists" }, headers, { status: 400 });
+
+    const now = new Date().toISOString();
+    const user: DemoUser = {
+      id: crypto.randomUUID(),
+      org_id: demoOrg.id,
+      email: validated.email.toLowerCase(),
+      password_hash: await Bun.password.hash(validated.password),
+      full_name: validated.full_name,
+      role: validated.org_name && !validated.invite_code ? "organization_admin" : validated.role,
+      created_at: now,
+    };
+    demoUsers.set(user.email, user);
+    if (user.role === "retiree") makeDemoExperience(user);
+
+    const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    return safeJson({ user: toSafeUser(user), token }, headers);
+  }
+
+  if (url.pathname === "/api/auth/login" && req.method === "POST") {
+    const validated = loginSchema.parse(await req.json());
+    const user = demoUsers.get(validated.email.toLowerCase());
+    if (!user || !(await Bun.password.verify(validated.password, user.password_hash))) {
+      return safeJson({ message: "Invalid credentials" }, headers, { status: 401 });
+    }
+    if (user.role === "retiree") makeDemoExperience(user);
+
+    const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    return safeJson({ user: toSafeUser(user), token }, headers);
+  }
+
+  if (!decoded) return null;
+
+  const user = [...demoUsers.values()].find((candidate) => candidate.id === decoded.sub);
+  if (!user) return safeJson({ message: "Demo user not found. Sign up again after server restart." }, headers, { status: 401 });
+
+  if (url.pathname === "/api/dashboard" && req.method === "GET") {
+    if (user.role === "retiree") {
+      const experiences = [...demoExperiences.values()].filter((experience) => experience.retiree_id === user.id);
+      const activeExperience = experiences.find((experience) => experience.status === "active") || experiences[0] || null;
+      const sessions = activeExperience
+        ? [...demoSessions.values()].filter((session) => session.engagement_id === activeExperience.id).sort((a, b) => a.session_number - b.session_number)
+        : [];
+      return safeJson({ experiences, activeExperience, sessions }, headers);
+    }
+
+    return safeJson({
+      organization: demoOrg,
+      members: [...demoUsers.values()].map(toSafeUser),
+      experiences: [...demoExperiences.values()],
+    }, headers);
+  }
+
+  if (url.pathname === "/api/experiences" && req.method === "POST") {
+    const engagement = makeDemoExperience(user);
+    const sessions = [...demoSessions.values()].filter((session) => session.engagement_id === engagement.id);
+    return safeJson({ engagement, sessions }, headers);
+  }
+
+  if (url.pathname === "/api/sessions" && req.method === "GET") {
+    const engagementId = url.searchParams.get("engagement_id");
+    const sessions = [...demoSessions.values()]
+      .filter((session) => !engagementId || session.engagement_id === engagementId)
+      .sort((a, b) => a.session_number - b.session_number);
+    return safeJson(sessions, headers);
+  }
+
+  if (url.pathname.startsWith("/api/sessions/") && req.method === "GET") {
+    const sessionId = url.pathname.split("/").pop() || "";
+    const session = demoSessions.get(sessionId);
+    if (!session) return safeJson({ message: "Session not found" }, headers, { status: 404 });
+    const session_exchanges = demoExchanges.get(sessionId) || [];
+    return safeJson({
+      ...session,
+      experience_transcript: session_exchanges,
+      latest_exchange: session_exchanges.at(-1) || null,
+      session_exchanges,
+      experience_exchanges: session_exchanges,
+    }, headers);
+  }
+
+  if (url.pathname === "/api/exchanges" && req.method === "POST") {
+    const body = await req.json() as ExchangePayload;
+    const current = demoExchanges.get(body.session_id) || [];
+    const exchange = { ...body, created_at: new Date().toISOString() };
+    demoExchanges.set(body.session_id, [...current.filter((item) => item.id !== body.id), exchange]);
+    return safeJson({ status: "success" }, headers);
+  }
+
+  if (url.pathname === "/api/interview/stream" && req.method === "POST") {
+    return new Response("Thanks. What concrete example best shows that knowledge in action?", {
+      headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  if (url.pathname.startsWith("/api/profiles/")) {
+    return safeJson({
+      summary: "Local demo profile. Connect a public Postgres DATABASE_URL for persisted data.",
+      entries: [...demoExchanges.values()].flat(),
+    }, headers);
+  }
+
+  return null;
+}
+
+if (useDemoApi) {
+  console.warn("Using local demo API because DATABASE_URL points to Railway private host.");
+}
 
 // simple in-memory rate limit for auth.
 const rateLimit = new Map<string, { count: number; reset: number }>();
@@ -38,7 +281,7 @@ function checkRateLimit(key: string) {
 function verifyToken(authHeader: string | null) {
   if (!authHeader?.startsWith("Bearer ")) return null;
   try {
-    return jwt.verify(authHeader.split(" ")[1], JWT_SECRET) as { sub: string, role: string };
+    return jwt.verify(authHeader.split(" ")[1], JWT_SECRET) as unknown as { sub: string, role: string };
   } catch {
     return null;
   }
@@ -306,7 +549,15 @@ async function getOrganizationAdminContext(userId: string) {
   return { organization, members, experiences };
 }
 
-function buildFallbackExperienceTitle(experience: { retiree_name?: string; job_title?: string | null; org_name?: string }, exchanges: Array<{ question_text: string; response_text?: string | null; ai_follow_up?: string | null }>) {
+type ExperienceTitleExchange = {
+  session_number: number;
+  session_focus: string;
+  question_text: string;
+  response_text?: string | null;
+  ai_follow_up?: string | null;
+};
+
+function buildFallbackExperienceTitle(experience: { retiree_name?: string; job_title?: string | null; org_name?: string }, exchanges: ExperienceTitleExchange[]) {
   const sourceText = [...exchanges]
     .reverse()
     .map((exchange) => normalizeContextText(exchange.response_text || exchange.ai_follow_up || exchange.question_text))
@@ -340,7 +591,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
     throw new Error('Experience not found');
   }
 
-  const exchanges = await sql`
+  const exchanges = await sql<ExperienceTitleExchange[]>`
     SELECT s.session_number, s.session_focus, x.question_text, x.response_text, x.ai_follow_up, x.created_at
     FROM interview_sessions s
     JOIN interview_exchanges x ON x.session_id = s.id
@@ -377,7 +628,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
     if (generatedText) {
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
-        .replace(/^['\"`]|['\"`]$/g, '')
+        .replace(/^['"`]|['"`]$/g, '')
         .replace(/[.]+$/g, '')
         .trim();
     }
@@ -401,7 +652,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
 
 Bun.serve({
   port: port,
-  async fetch(req) {
+  async fetch(req: Request) {
     const url = new URL(req.url);
     
     // security headers.
@@ -416,6 +667,13 @@ Bun.serve({
     if (url.pathname.startsWith("/api")) {
       const apiHeaders = new Headers(headers);
       apiHeaders.set("Content-Type", "application/json");
+      try {
+        const demoResponse = await handleDemoApi(req, url, apiHeaders);
+        if (demoResponse) return demoResponse;
+      } catch (e: any) {
+        const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+        return safeJson({ message }, apiHeaders, { status: 400 });
+      }
 
       // auth signup
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
@@ -424,7 +682,8 @@ Bun.serve({
         try {
           const body = await req.json();
           const validated = signupSchema.parse(body);
-          let { email, password, full_name, role, org_name, invite_code } = validated;
+          const { email, password, full_name, org_name, invite_code } = validated;
+          let { role } = validated;
 
           const ip = req.headers.get("x-forwarded-for") || "unknown";
           if (checkRateLimit(`signup:${ip}`)) {
@@ -493,7 +752,8 @@ Bun.serve({
             }
           }
 
-          const { password_hash, ...userSafe } = user;
+          const userSafe = { ...user };
+          delete (userSafe as typeof user & { password_hash?: string }).password_hash;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user: userSafe, token }), { headers: apiHeaders });
         } catch (e: any) {
@@ -567,7 +827,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const body = await req.json();
+          const body = await req.json() as OrgMemberPayload;
           const { full_name, email, password, role, job_title, years_exp } = body;
           const [adminUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
           if (!adminUser) return new Response(JSON.stringify({ message: "Organization admin not found" }), { status: 404, headers: apiHeaders });
@@ -732,7 +992,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { release_date, engagement_id } = await req.json();
+          const { release_date, engagement_id } = await req.json() as ReleaseDatePayload;
           if (engagement_id) {
             await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE id = ${engagement_id} AND retiree_id = ${decoded.sub}`;
           } else {
@@ -805,7 +1065,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
+          const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json() as ExchangePayload;
           const [session] = await sql`
             SELECT s.id, s.session_number, s.session_focus, s.running_summary, e.id AS engagement_id, e.org_id, e.retiree_id, e.transcript
             FROM interview_sessions s
@@ -829,7 +1089,7 @@ Bun.serve({
 
           await sql`
             INSERT INTO interview_exchanges (id, session_id, org_id, retiree_id, question_text, question_type, response_text, ai_follow_up, sequence_order)
-            VALUES (${id}, ${session_id}, ${session.org_id}, ${session.retiree_id}, ${question_text}, ${question_type}, ${response_text}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
+            VALUES (${id}, ${session_id}, ${session.org_id}, ${session.retiree_id}, ${question_text}, ${question_type}, ${response_text ?? null}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
             ON CONFLICT (id) DO UPDATE SET
               session_id = EXCLUDED.session_id,
               org_id = EXCLUDED.org_id,
@@ -919,7 +1179,7 @@ Bun.serve({
         if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
-          const { sessionId, userResponse } = await req.json();
+          const { sessionId, userResponse } = await req.json() as InterviewStreamPayload;
           
           // fetch context from DB.
           const [session] = await sql`
@@ -1046,7 +1306,7 @@ Bun.serve({
         if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
 
         try {
-          const { chat_id, role, content } = await req.json();
+          const { chat_id, role, content } = await req.json() as SuccessorChatMessagePayload;
           const [chat] = await sql`
             SELECT * FROM successor_chats
             WHERE id = ${chat_id} AND successor_id = ${decoded.sub} AND status = 'active'
@@ -1132,7 +1392,7 @@ Bun.serve({
         if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
-          const { chatId, engagementId, message } = await req.json();
+          const { chatId, engagementId, message } = await req.json() as SuccessorStreamPayload;
 
           if (typeof chatId !== 'string' || typeof engagementId !== 'string' || typeof message !== 'string') {
             return new Response(JSON.stringify({ message: 'Invalid payload' }), { status: 400, headers: apiHeaders });

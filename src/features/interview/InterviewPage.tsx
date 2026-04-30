@@ -111,7 +111,7 @@ export default function InterviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
+  }, [sessionId, setCurrentQuestion, setCurrentQuestionIndex, resetQuestionFlow, setDraftResponse, setSession, setStreamingText]);
 
   useEffect(() => {
     if (!sessionTransition) return;

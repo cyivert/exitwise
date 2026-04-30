@@ -23,6 +23,9 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   :root {
     --green-deep: #1a3a2a;
     --green-mid: #2d5a40;
