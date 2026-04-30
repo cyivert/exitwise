@@ -769,6 +769,52 @@ Bun.serve({
         }
       }
 
+      // successor: list released retirees in same org
+      if (url.pathname === "/api/successor/retirees" && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const [successorUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!successorUser) return new Response(JSON.stringify([]), { headers: apiHeaders });
+
+          const retirees = await sql`
+            SELECT e.id AS engagement_id, u.full_name, u.job_title, u.id AS retiree_id, e.release_date, e.title
+            FROM transfer_engagements e
+            JOIN users u ON u.id = e.retiree_id
+            WHERE e.org_id = ${successorUser.org_id} AND e.release_date IS NOT NULL
+            ORDER BY u.full_name ASC
+          `;
+          return new Response(JSON.stringify(retirees), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: reset (delete messages, restore active)
+      if (url.pathname.startsWith("/api/successor/chat/") && url.pathname.endsWith("/reset") && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const parts = url.pathname.split("/");
+          const chatId = parts[parts.length - 2];
+          const [owned] = await sql`SELECT id FROM successor_chats WHERE id = ${chatId} AND successor_id = ${decoded.sub}`;
+          if (!owned) return new Response(JSON.stringify({ message: "Chat not found" }), { status: 404, headers: apiHeaders });
+
+          await sql`DELETE FROM successor_chat_messages WHERE chat_id = ${chatId}`;
+          const [chat] = await sql`
+            UPDATE successor_chats
+            SET status = 'active', confirmed_at = NULL, updated_at = NOW()
+            WHERE id = ${chatId}
+            RETURNING *
+          `;
+          return new Response(JSON.stringify({ chat }), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
       // successor chat: save message
       if (url.pathname === "/api/successor/chat/messages" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));

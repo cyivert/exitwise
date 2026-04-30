@@ -35,6 +35,11 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path={ROUTES.KNOWLEDGE} element={
+          <ProtectedRoute allowedRoles={['successor']}>
+            <KnowledgeChatPage />
+          </ProtectedRoute>
+        } />
         <Route path={ROUTES.KNOWLEDGE_CHAT} element={
           <ProtectedRoute allowedRoles={['successor']}>
             <KnowledgeChatPage />
