@@ -892,6 +892,25 @@ Bun.serve({
         }
       }
 
+      // mark session complete
+      if (/^\/api\/interview\/session\/[^/]+\/complete$/.test(url.pathname) && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded) return new Response("Unauthorized", { status: 401 });
+        const parts = url.pathname.split('/');
+        const sessionId = parts[4];
+        const apiHeaders = new Headers(headers);
+        apiHeaders.set("Content-Type", "application/json");
+        try {
+          await sql`
+            UPDATE interview_sessions SET status = 'complete'
+            WHERE id = ${sessionId} AND retiree_id = ${decoded.sub}
+          `;
+          return new Response(JSON.stringify({ ok: true }), { status: 200, headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
       // gemini stream proxy
       if (url.pathname === "/api/interview/stream" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));

@@ -9,6 +9,10 @@ import type { QuestionType } from '../../types';
 import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
 import UserMenu from '../../components/shared/UserMenu';
 
+function formatFocus(focus: string) {
+  return focus.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function groupSessionExchanges(exchanges: any[]) {
   return exchanges.reduce<Record<number, any[]>>((groups, exchange) => {
     const sessionNumber = Number(exchange.session_number || 0);
@@ -139,6 +143,8 @@ export default function InterviewPage() {
   const remainingSessions = currentSessionNumber
     ? sessionList.filter((session) => session.session_number > currentSessionNumber && session.status !== 'complete').length
     : 0;
+  const isSessionComplete = sessionData?.status === 'complete';
+  const allComplete = sessionList.length > 0 && sessionList.every(s => s.status === 'complete');
   const displayedQuestion = normalizeInterviewText(currentQuestion);
   const savedExperienceExchanges = Array.isArray(experienceTranscript) ? experienceTranscript : [];
   const groupedExperienceExchanges = groupSessionExchanges(savedExperienceExchanges);
@@ -175,6 +181,8 @@ export default function InterviewPage() {
     if (isFinalQuestionInSession) {
       const nextSession = sessionList.find((session) => session.session_number === sessionData.session_number + 1);
       resetQuestionFlow();
+      await interviewService.completeSession(sessionId!);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'complete' } : s));
       setSessionTransition({
         fromSession: sessionData.session_number,
         nextSessionId: nextSession?.id ?? null,
@@ -251,18 +259,37 @@ export default function InterviewPage() {
           </p>
         </div>
 
-        <nav className="space-y-4">
+        <nav className="space-y-1">
           {sessionList.map((session) => {
-            const isCurrentSession = session.id === sessionId;
+            const isCurrent = session.id === sessionId;
             const isComplete = session.status === 'complete';
+            const isPending = !isComplete && !isCurrent;
+            const isClickable = isComplete && !isCurrent;
 
-            return (
-              <div key={session.id} className="flex items-center space-x-3">
-                <div className={`w-2 h-2 rounded-full ${isComplete ? 'bg-green-light' : isCurrentSession ? 'bg-amber' : 'bg-cream-dark'}`} />
-                <span className={`text-sm ${isCurrentSession ? 'font-medium text-text-dark' : 'text-text-mid'}`}>
-                  Session {session.session_number}: {session.session_focus}
-                </span>
+            const badge = isComplete
+              ? <span className="text-[9px] font-bold uppercase tracking-widest text-green-light bg-green-deep/20 px-1.5 py-0.5 rounded">Completed</span>
+              : isCurrent
+                ? <span className="text-[9px] font-bold uppercase tracking-widest text-amber bg-amber/10 px-1.5 py-0.5 rounded">Active</span>
+                : <span className="text-[9px] font-bold uppercase tracking-widest text-text-light bg-cream-dark px-1.5 py-0.5 rounded">Pending</span>;
+
+            const inner = (
+              <div className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-lg transition-colors ${isCurrent ? 'bg-amber/10 border border-amber/30' : isComplete ? 'hover:bg-green-pale/40' : 'opacity-60'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-sm font-medium ${isCurrent ? 'text-text-dark' : isComplete ? 'text-text-mid' : 'text-text-light'}`}>
+                    Session {session.session_number}
+                  </span>
+                  {badge}
+                </div>
+                <span className="text-xs text-text-light">{formatFocus(session.session_focus)}</span>
               </div>
+            );
+
+            return isClickable ? (
+              <button key={session.id} className="w-full text-left cursor-pointer" onClick={() => navigate(`/interview/${session.id}`)}>
+                {inner}
+              </button>
+            ) : (
+              <div key={session.id}>{inner}</div>
             );
           })}
         </nav>
@@ -284,12 +311,26 @@ export default function InterviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus}</div>
+            <div className="label-caps bg-amber-light px-3 py-1 rounded text-amber">{sessionFocus ? formatFocus(sessionFocus) : ''}</div>
             <UserMenu />
           </div>
         </header>
 
         <main className="grow p-12 max-w-3xl mx-auto w-full">
+          {isSessionComplete ? (
+            <div className="mb-8 rounded-lg border border-green-pale bg-green-pale/30 px-6 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="label-caps text-green-mid mb-0.5">Session Complete</p>
+                <p className="text-sm text-text-mid">{allComplete ? 'All sessions recorded — knowledge is locked.' : 'This session is done. Browse the transcript below.'}</p>
+              </div>
+              {!allComplete && (
+                <button onClick={() => navigate(ROUTES.DASHBOARD)} className="text-xs px-3 py-1.5 rounded border border-green-mid text-green-mid hover:bg-green-pale transition-colors shrink-0">
+                  Back to Dashboard
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="mb-12">
             <span className="label-caps text-amber block mb-4">Current Focus</span>
             <h2 className="text-4xl leading-tight mb-6 font-serif">
@@ -305,9 +346,9 @@ export default function InterviewPage() {
               className="w-full h-48 p-6 bg-white border border-cream-dark rounded-lg focus:ring-1 focus:ring-green-mid outline-none resize-none text-lg shadow-inner font-serif"
               disabled={isStreaming}
             />
-            
+
             <div className="flex justify-between items-center gap-3 flex-wrap">
-              <button 
+              <button
                 onClick={() => navigate(ROUTES.DASHBOARD)}
                 className="text-text-light hover:text-text-dark transition-colors"
               >
@@ -335,6 +376,8 @@ export default function InterviewPage() {
               </div>
             </div>
           </div>
+            </>
+          )}
 
           <div className="mt-12 p-8 bg-green-pale/20 border border-green-pale rounded-lg">
             <span className="label-caps text-green-mid block mb-4">Saved Answers This Experience</span>
