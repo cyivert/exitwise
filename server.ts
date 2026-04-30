@@ -10,6 +10,8 @@ const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1/messages';
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
@@ -52,6 +54,205 @@ function normalizeContextText(text: string) {
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function limitText(text: string, maxChars: number) {
+  if (!text) return '';
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+function asSafeText(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return normalizeContextText(value);
+}
+
+async function generateGeminiStream(prompt: string | string[]) {
+  if (!genAI) {
+    throw new Error('AI configuration missing');
+  }
+
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      return await model.generateContentStream(prompt);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to generate Gemini response');
+}
+
+async function generateAnthropicStream(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+
+  const models = [process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022', 'claude-3-5-sonnet-20241022'];
+  let lastError: unknown = null;
+
+  for (const modelName of models) {
+    try {
+      const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
+      const body = {
+        model: modelName,
+        messages: [{ role: 'user', content: promptText }],
+        max_tokens: 1024,
+        stream: true,
+      };
+
+      const res = await fetch(ANTHROPIC_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let bodyText = '';
+        try {
+          const json = await res.json();
+          bodyText = JSON.stringify(json);
+        } catch {
+          bodyText = await res.text().catch(() => '');
+        }
+        console.error('[anthropic] non-ok response', res.status, bodyText);
+        throw new Error(`Anthropic error ${res.status}: ${bodyText}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No stream from Anthropic');
+
+      async function* sseGenerator() {
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const raw = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 2);
+            const lines = raw.split(/\n/);
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const obj = JSON.parse(data);
+                if (obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta') {
+                  yield { text: () => String(obj.delta.text) };
+                }
+              } catch {
+                // skip unparseable lines
+              }
+            }
+          }
+        }
+      }
+
+      return { stream: sseGenerator() };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Anthropic generation failed');
+}
+
+async function generateModelStream(prompt: string | string[]) {
+  // Priority: Anthropic (if configured) -> Gemini (if configured)
+  if (ANTHROPIC_API_KEY) return await generateAnthropicStream(prompt);
+  if (GEMINI_API_KEY && genAI) return await generateGeminiStream(prompt);
+  throw new Error('No AI provider configured');
+}
+
+async function generateAnthropicText(prompt: string | string[]) {
+  if (!ANTHROPIC_API_KEY) throw new Error('Anthropic API key missing');
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022';
+  const promptText = Array.isArray(prompt) ? prompt.join('\n') : String(prompt);
+  const body = {
+    model,
+    messages: [{ role: 'user', content: promptText }],
+    max_tokens: 512,
+  };
+
+  const res = await fetch(ANTHROPIC_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Anthropic error ${res.status}: ${txt}`);
+  }
+
+  const json = await res.json();
+  const text = json?.content?.[0]?.text ?? null;
+  return typeof text === 'string' ? text : JSON.stringify(json);
+}
+
+async function generateModelText(prompt: string | string[]) {
+  if (ANTHROPIC_API_KEY) return await generateAnthropicText(prompt);
+  if (GEMINI_API_KEY && genAI) {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(Array.isArray(prompt) ? prompt : String(prompt));
+    return result.response?.text?.()?.trim?.() ?? '';
+  }
+  throw new Error('No AI provider configured');
+}
+
+function parseGeminiError(error: unknown) {
+  const fallbackMessage = 'AI is temporarily unavailable. Please try again shortly.';
+  const rawMessage = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : fallbackMessage;
+
+  const message = rawMessage || fallbackMessage;
+  const lower = message.toLowerCase();
+  const isQuotaOrRateLimit =
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit');
+
+  let retryAfterSeconds: number | null = null;
+  const retryMatch = message.match(/retry(?:\s+in)?\s+([\d.]+)s/i) || message.match(/"retryDelay":"(\d+)s"/i);
+  if (retryMatch) {
+    const parsed = Number(retryMatch[1]);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      retryAfterSeconds = Math.ceil(parsed);
+    }
+  }
+
+  if (isQuotaOrRateLimit) {
+    return {
+      status: 429,
+      message: 'Gemini rate limit reached for this project. Please retry shortly or add billing/quota for the configured API key.',
+      retryAfterSeconds,
+      rawMessage: message,
+    };
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+    retryAfterSeconds,
+    rawMessage: message,
+  };
 }
 
 const SESSION_FOCUS_SEQUENCE = ['orientation', 'processes', 'decisions', 'relationships', 'edge_cases', 'review'] as const;
@@ -172,10 +373,8 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
   let cleanedTitle = '';
 
   try {
-    if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent(prompt);
-      const generatedText = result.response.text().trim();
+    const generatedText = await generateModelText(prompt);
+    if (generatedText) {
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
         .replace(/^['\"`]|['\"`]$/g, '')
@@ -351,7 +550,12 @@ Bun.serve({
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 
@@ -751,19 +955,67 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream([prompt, userResponse]);
+          const result = await generateModelStream([prompt, userResponse]);
 
           const stream = new ReadableStream({
             async start(controller) {
               for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
               }
               controller.close();
             },
           });
 
           return new Response(stream, { headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor: list released retirees in same org
+      if (url.pathname === "/api/successor/retirees" && req.method === "GET") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const [successorUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
+          if (!successorUser) return new Response(JSON.stringify([]), { headers: apiHeaders });
+
+          const retirees = await sql`
+            SELECT e.id AS engagement_id, u.full_name, u.job_title, u.id AS retiree_id, e.release_date, e.title
+            FROM transfer_engagements e
+            JOIN users u ON u.id = e.retiree_id
+            WHERE e.org_id = ${successorUser.org_id} AND e.release_date IS NOT NULL
+            ORDER BY u.full_name ASC
+          `;
+          return new Response(JSON.stringify(retirees), { headers: apiHeaders });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+        }
+      }
+
+      // successor chat: reset (delete messages, restore active)
+      if (url.pathname.startsWith("/api/successor/chat/") && url.pathname.endsWith("/reset") && req.method === "POST") {
+        const decoded = verifyToken(req.headers.get("Authorization"));
+        if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
+
+        try {
+          const parts = url.pathname.split("/");
+          const chatId = parts[parts.length - 2];
+          const [owned] = await sql`SELECT id FROM successor_chats WHERE id = ${chatId} AND successor_id = ${decoded.sub}`;
+          if (!owned) return new Response(JSON.stringify({ message: "Chat not found" }), { status: 404, headers: apiHeaders });
+
+          await sql`DELETE FROM successor_chat_messages WHERE chat_id = ${chatId}`;
+          const [chat] = await sql`
+            UPDATE successor_chats
+            SET status = 'active', confirmed_at = NULL, updated_at = NOW()
+            WHERE id = ${chatId}
+            RETURNING *
+          `;
+          return new Response(JSON.stringify({ chat }), { headers: apiHeaders });
         } catch (e: any) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
@@ -863,9 +1115,18 @@ Bun.serve({
         try {
           const { chatId, engagementId, message } = await req.json();
 
+          if (typeof chatId !== 'string' || typeof engagementId !== 'string' || typeof message !== 'string') {
+            return new Response(JSON.stringify({ message: 'Invalid payload' }), { status: 400, headers: apiHeaders });
+          }
+
+          const safeMessage = normalizeContextText(message);
+          if (!safeMessage) {
+            return new Response(JSON.stringify({ message: 'Message is required' }), { status: 400, headers: apiHeaders });
+          }
+
           const [chat] = await sql`
             SELECT * FROM successor_chats
-            WHERE id = ${chatId} AND successor_id = ${decoded.sub} AND status = 'active'
+            WHERE id = ${chatId} AND successor_id = ${decoded.sub} AND engagement_id = ${engagementId} AND status = 'active'
           `;
           if (!chat) return new Response("Chat not found or already confirmed", { status: 404 });
 
@@ -883,6 +1144,7 @@ Bun.serve({
             FROM knowledge_profiles
             WHERE engagement_id = ${engagementId}
             ORDER BY section ASC
+            LIMIT 40
           `;
 
           const interviewExchanges = await sql`
@@ -891,6 +1153,7 @@ Bun.serve({
             JOIN interview_sessions s ON s.id = x.session_id
             WHERE s.engagement_id = ${engagementId} AND x.response_text IS NOT NULL
             ORDER BY s.session_number ASC, x.sequence_order ASC
+            LIMIT 72
           `;
 
           const recentMessages = await sql`
@@ -901,15 +1164,42 @@ Bun.serve({
           `;
 
           const profileContext = knowledgeProfiles.length > 0
-            ? knowledgeProfiles.map((p: any) => `[${p.section.toUpperCase()}] ${p.title}\n${normalizeContextText(p.content)}${p.quote ? `\nQuote: "${normalizeContextText(p.quote)}"` : ''}`).join('\n\n')
+            ? limitText(
+                knowledgeProfiles
+                  .map((p: any) => {
+                    const section = asSafeText(p.section || 'general').toUpperCase() || 'GENERAL';
+                    const title = asSafeText(p.title) || 'Untitled';
+                    const content = asSafeText(p.content) || 'No content captured.';
+                    const quote = asSafeText(p.quote);
+                    return `[${section}] ${title}\n${content}${quote ? `\nQuote: "${quote}"` : ''}`;
+                  })
+                  .join('\n\n'),
+                12000,
+              )
             : 'No structured knowledge profiles captured yet.';
 
           const exchangeContext = interviewExchanges.length > 0
-            ? interviewExchanges.map((x: any, i: number) => `Session ${x.session_number} (${x.session_focus}) Q${i + 1}: ${normalizeContextText(x.question_text)}\nAnswer: ${normalizeContextText(x.response_text)}`).join('\n\n')
+            ? limitText(
+                interviewExchanges
+                  .map((x: any, i: number) => {
+                    const sessionNumber = Number.isFinite(Number(x.session_number)) ? Number(x.session_number) : '?';
+                    const focus = asSafeText(x.session_focus) || 'unspecified';
+                    const question = asSafeText(x.question_text) || 'No question captured.';
+                    const answer = asSafeText(x.response_text) || 'No answer captured.';
+                    return `Session ${sessionNumber} (${focus}) Q${i + 1}: ${question}\nAnswer: ${answer}`;
+                  })
+                  .join('\n\n'),
+                16000,
+              )
             : 'No interview transcript available.';
 
           const chatHistoryContext = recentMessages.length > 0
-            ? recentMessages.map((m: any) => `${m.role === 'user' ? 'Successor' : 'AI'}: ${m.content}`).join('\n')
+            ? limitText(
+                recentMessages
+                  .map((m: any) => `${m.role === 'user' ? 'Successor' : 'AI'}: ${asSafeText(m.content)}`)
+                  .join('\n'),
+                5000,
+              )
             : '';
 
           const prompt = `You are ExitWise AI, a knowledge access assistant helping a successor employee learn from a retiring colleague's captured institutional knowledge.
@@ -928,15 +1218,17 @@ ${chatHistoryContext ? `CONVERSATION HISTORY:\n${chatHistoryContext}\n` : ''}INS
 - Be specific and practical for the successor
 - Output plain text only. No HTML, markdown, or formatting symbols.
 
-Successor's question: ${message}`;
+Successor's question: ${safeMessage}`;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream(prompt);
+          const result = await generateModelStream(prompt);
 
           const stream = new ReadableStream({
             async start(controller) {
               for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+                const text = typeof chunk?.text === 'function' ? chunk.text() : '';
+                if (text) {
+                  controller.enqueue(text);
+                }
               }
               controller.close();
             },
@@ -944,7 +1236,13 @@ Successor's question: ${message}`;
 
           return new Response(stream, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         } catch (e: any) {
-          return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
+          console.error('[successor/stream]', e);
+          const aiError = parseGeminiError(e);
+          const responseHeaders = new Headers(apiHeaders);
+          if (aiError.retryAfterSeconds) {
+            responseHeaders.set('Retry-After', String(aiError.retryAfterSeconds));
+          }
+          return new Response(JSON.stringify({ message: aiError.message, detail: aiError.rawMessage }), { status: aiError.status, headers: responseHeaders });
         }
       }
 
