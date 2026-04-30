@@ -1,6 +1,6 @@
 import { join } from "path";
 import jwt from "jsonwebtoken";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import sql from "./src/database/db";
 import { z } from "zod";
 import { loginSchema, signupSchema } from "./src/schemas/auth";
@@ -9,13 +9,13 @@ import { loginSchema, signupSchema } from "./src/schemas/auth";
 const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
 const JWT_SECRET = process.env.JWT_SECRET;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is required");
 }
 
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 // simple in-memory rate limit for auth.
 const rateLimit = new Map<string, { count: number; reset: number }>();
@@ -172,17 +172,20 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
   let cleanedTitle = '';
 
   try {
-    if (genAI) {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent(prompt);
-      const generatedText = result.response.text().trim();
+    if (groq) {
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+      });
+      const generatedText = chatCompletion.choices[0]?.message?.content?.trim() || '';
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
-        .replace(/^['\"`]|['\"`]$/g, '')
+        .replace(/^['"`]|['"`]$/g, '')
         .replace(/[.]+$/g, '')
         .trim();
     }
-  } catch {
+  } catch (e: unknown) {
+    console.error('Groq title generation error:', e instanceof Error ? e.message : String(e));
     cleanedTitle = '';
   }
 
@@ -204,6 +207,7 @@ Bun.serve({
   port: port,
   async fetch(req) {
     const url = new URL(req.url);
+    console.log(`[${req.method}] ${url.pathname}`);
     const origin = req.headers.get("origin") || "*";
     
     // security + CORS headers.
@@ -230,12 +234,11 @@ Bun.serve({
 
       // auth signup
       if (url.pathname === "/api/auth/signup" && req.method === "POST") {
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
         try {
           const body = await req.json();
           const validated = signupSchema.parse(body);
-          let { email, password, full_name, role, org_name, invite_code } = validated;
+          const { email, password, full_name, org_name, invite_code } = validated;
+          let { role } = validated;
 
           const ip = req.headers.get("x-forwarded-for") || "unknown";
           if (checkRateLimit(`signup:${ip}`)) {
@@ -251,7 +254,6 @@ Bun.serve({
             }
             org_id = org.id;
           } else if (org_name) {
-            // New org creation: first user becomes the organization admin.
             const [org] = await sql`
               INSERT INTO organizations (name, industry, invite_code) 
               VALUES (${org_name}, 'other', substring(gen_random_uuid()::text, 1, 8)) 
@@ -263,24 +265,22 @@ Bun.serve({
             return new Response(JSON.stringify({ message: "Organization name or invite code required" }), { status: 400, headers: apiHeaders });
           }
 
-          const password_hash = await Bun.password.hash(password);
+          const hash = await Bun.password.hash(password);
           const [user] = await sql`
             INSERT INTO users (org_id, email, password_hash, full_name, role) 
-            VALUES (${org_id}, ${email}, ${password_hash}, ${full_name}, ${role}) 
+            VALUES (${org_id}, ${email}, ${hash}, ${full_name}, ${role}) 
             RETURNING id, org_id, email, full_name, role, created_at
           `;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user, token }), { headers: apiHeaders });
-        } catch (e: any) {
-          const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+        } catch (e: unknown) {
+          const message = e instanceof z.ZodError ? e.issues[0].message : (e instanceof Error ? e.message : String(e));
           return new Response(JSON.stringify({ message }), { status: 400, headers: apiHeaders });
         }
       }
 
       // auth login
       if (url.pathname === "/api/auth/login" && req.method === "POST") {
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
         try {
           const body = await req.json();
           const validated = loginSchema.parse(body);
@@ -296,7 +296,6 @@ Bun.serve({
             return new Response(JSON.stringify({ message: "Invalid credentials" }), { status: 401, headers: apiHeaders });
           }
 
-          // hackathon auto-setup: ensure retiree has an engagement and 6 sessions.
           if (user.role === 'retiree') {
             const [engagement] = await sql`SELECT id FROM transfer_engagements WHERE retiree_id = ${user.id}`;
             if (!engagement) {
@@ -304,11 +303,13 @@ Bun.serve({
             }
           }
 
-          const { password_hash, ...userSafe } = user;
+          const { ...userSafe } = user;
+          (userSafe as Record<string, unknown>).password_hash = undefined;
+          delete (userSafe as Record<string, unknown>).password_hash;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user: userSafe, token }), { headers: apiHeaders });
-        } catch (e: any) {
-          const message = e instanceof z.ZodError ? e.issues[0].message : e.message;
+        } catch (e: unknown) {
+          const message = e instanceof z.ZodError ? e.issues[0].message : (e instanceof Error ? e.message : String(e));
           return new Response(JSON.stringify({ message }), { status: 400, headers: apiHeaders });
         }
       }
@@ -317,9 +318,6 @@ Bun.serve({
       if (url.pathname === "/api/dashboard" && req.method === "GET") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded) return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           if (decoded.role === 'retiree') {
@@ -360,17 +358,15 @@ Bun.serve({
           }
 
           return new Response(JSON.stringify({ status: "ok" }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
+      // org members logic
       if (url.pathname === "/api/org/members" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || (decoded.role !== 'organization_admin' && decoded.role !== 'admin')) return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const body = await req.json();
@@ -386,7 +382,7 @@ Bun.serve({
           `;
 
           return new Response(JSON.stringify({ user }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
@@ -394,9 +390,6 @@ Bun.serve({
       if (url.pathname.startsWith("/api/org/members/") && req.method === "DELETE") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || (decoded.role !== 'organization_admin' && decoded.role !== 'admin')) return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const memberId = url.pathname.split("/").pop();
@@ -430,17 +423,15 @@ Bun.serve({
 
           await sql`DELETE FROM users WHERE id = ${memberId}`;
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
+      // experiences endpoints
       if (url.pathname === "/api/experiences" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const [retiree] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
@@ -448,7 +439,7 @@ Bun.serve({
 
           const result = await createExperienceForRetiree(retiree);
           return new Response(JSON.stringify(result), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
@@ -456,9 +447,6 @@ Bun.serve({
       if (url.pathname.startsWith("/api/experiences/") && url.pathname.endsWith("/title") && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const engagementId = url.pathname.split("/")[3];
@@ -468,7 +456,7 @@ Bun.serve({
 
           const updatedExperience = await generateExperienceTitle(engagementId, decoded.sub);
           return new Response(JSON.stringify({ experience: updatedExperience }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
@@ -476,9 +464,6 @@ Bun.serve({
       if (url.pathname.startsWith("/api/experiences/") && req.method === "DELETE") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const engagementId = url.pathname.split("/").pop();
@@ -498,18 +483,15 @@ Bun.serve({
 
           await sql`DELETE FROM transfer_engagements WHERE id = ${engagementId}`;
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
-      // session list
+      // session endpoints
       if (url.pathname === "/api/sessions" && req.method === "GET") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded) return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const engagementId = url.searchParams.get("engagement_id");
@@ -524,18 +506,14 @@ Bun.serve({
           `;
 
           return new Response(JSON.stringify(sessions), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
-      // set release date
       if (url.pathname === "/api/dashboard/release" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const { release_date, engagement_id } = await req.json();
@@ -545,19 +523,16 @@ Bun.serve({
             await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE retiree_id = ${decoded.sub}`;
           }
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
-      // session detail
       if (url.pathname.startsWith("/api/sessions/") && req.method === "GET") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded) return new Response("Unauthorized", { status: 401 });
         
         const sessionId = url.pathname.split("/").pop();
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         if (!sessionId) {
           return new Response(JSON.stringify({ message: "Session not found" }), { status: 404, headers: apiHeaders });
@@ -597,18 +572,14 @@ Bun.serve({
             session_exchanges: sessionExchanges,
             experience_exchanges: experienceExchanges,
           }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
-      // save exchange
       if (url.pathname === "/api/exchanges" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded) return new Response("Unauthorized", { status: 401 });
-
-        const apiHeaders = new Headers(headers);
-        apiHeaders.set("Content-Type", "application/json");
 
         try {
           const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
@@ -693,20 +664,19 @@ Bun.serve({
           `;
           
           return new Response(JSON.stringify({ status: "success" }), { headers: apiHeaders });
-        } catch (e: any) {
+        } catch (e: unknown) {
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }
 
-      // gemini stream proxy
+      // interview stream proxy (using Groq)
       if (url.pathname === "/api/interview/stream" && req.method === "POST") {
         const decoded = verifyToken(req.headers.get("Authorization"));
         if (!decoded || decoded.role !== 'retiree') return new Response("Unauthorized", { status: 401 });
 
-        if (!genAI) return new Response("AI configuration missing", { status: 500 });
-
         try {
           const { sessionId, userResponse } = await req.json();
+          console.log(`Stream request for session ${sessionId} (Groq active: ${!!groq})`);
           
           // fetch context from DB.
           const [session] = await sql`
@@ -726,7 +696,10 @@ Bun.serve({
             LIMIT 6
           `;
 
-          if (!session) return new Response("Session not found", { status: 404 });
+          if (!session) {
+            console.error(`Session ${sessionId} not found`);
+            return new Response("Session not found", { status: 404 });
+          }
 
           const exchangeContext = recentExchanges
             .map((exchange, index) => {
@@ -761,20 +734,60 @@ Bun.serve({
             - Output plain text only. Do not use HTML, XML, or markdown formatting.
           `;
 
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContentStream([prompt, userResponse]);
-
+          // FIX 1: We must use a TextEncoder because Bun streams strictly require Uint8Arrays
+          const encoder = new TextEncoder();
           const stream = new ReadableStream({
             async start(controller) {
-              for await (const chunk of result.stream) {
-                controller.enqueue(chunk.text());
+              try {
+                if (groq) {
+                  const streamResponse = await groq.chat.completions.create({
+                    messages: [
+                      { role: 'system', content: prompt },
+                      { role: 'user', content: userResponse || "Continue." }
+                    ],
+                    model: 'llama-3.3-70b-versatile',
+                    stream: true,
+                  });
+
+                  for await (const chunk of streamResponse) {
+                    const content = chunk.choices[0]?.delta?.content || '';
+                    if (content) {
+                      controller.enqueue(encoder.encode(content));
+                    }
+                  }
+                } else {
+                  // /caveman: mock fallback for dev/demo when groq missing.
+                  const mockResponses = [
+                    "That sounds like a critical process. Could you tell me more about the specific steps you take when a server goes down?",
+                    "I see. Who are the primary stakeholders you coordinate with during this phase?",
+                    "Interesting. What is the most common 'unwritten rule' that newcomers struggle with in this context?",
+                    "How do you usually handle exceptions to this standard procedure?",
+                  ];
+                  const mockText = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+                  
+                  // simulate streaming.
+                  for (const char of mockText) {
+                    controller.enqueue(encoder.encode(char));
+                    await new Promise(r => setTimeout(r, 20));
+                  }
+                }
+              } catch (e: unknown) {
+                console.error("Groq stream generation error:", e);
+              } finally {
+                controller.close();
               }
-              controller.close();
             },
           });
 
-          return new Response(stream, { headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } });
-        } catch (e: any) {
+          // FIX 2: Safely clone the CORS headers object without losing its properties
+          const streamHeaders = new Headers(headers);
+          streamHeaders.set("Content-Type", "text/plain; charset=utf-8");
+          streamHeaders.set("Cache-Control", "no-cache");
+          streamHeaders.set("Connection", "keep-alive");
+
+          return new Response(stream, { headers: streamHeaders });
+        } catch (e: unknown) {
+          console.error("Groq stream route error:", e);
           return new Response(JSON.stringify({ message: e.message }), { status: 500, headers: apiHeaders });
         }
       }

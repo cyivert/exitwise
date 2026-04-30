@@ -1,4 +1,4 @@
-import type { ApiResponse, LoginCredentials, SignupData, User } from '../types';
+import type { ApiResponse, LoginCredentials, SignupData, User, InterviewSession, InterviewExchange, TransferEngagement, Organization } from '../types';
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
@@ -48,41 +48,41 @@ export const authService = {
 };
 
 export const interviewService = {
-  getSessions: (engagementId: string) => apiFetch<any[]>(`/sessions?engagement_id=${engagementId}`),
-  getSession: (sessionId: string) => apiFetch<any>(`/sessions/${sessionId}`),
-  saveExchange: (exchange: any) => apiFetch<any>('/exchanges', {
+  getSessions: (engagementId: string) => apiFetch<InterviewSession[]>(`/sessions?engagement_id=${engagementId}`),
+  getSession: (sessionId: string) => apiFetch<{ session: InterviewSession; exchanges: InterviewExchange[] }>(`/sessions/${sessionId}`),
+  saveExchange: (exchange: Partial<InterviewExchange>) => apiFetch<{ exchange: InterviewExchange }>('/exchanges', {
     method: 'POST',
     body: JSON.stringify(exchange),
   }),
 };
 
 export const dashboardService = {
-  getDashboard: () => apiFetch<{ experiences?: any[]; activeExperience?: any; sessions?: any[]; organization?: any; members?: any[]; engagement?: any }>('/dashboard'),
-  createExperience: () => apiFetch<any>('/experiences', {
+  getDashboard: () => apiFetch<{ experiences?: TransferEngagement[]; activeExperience?: TransferEngagement; sessions?: InterviewSession[]; organization?: Organization; members?: User[]; engagement?: TransferEngagement }>('/dashboard'),
+  createExperience: () => apiFetch<{ engagement: TransferEngagement; sessions: InterviewSession[] }>('/experiences', {
     method: 'POST',
   }),
-  renameExperienceTitle: (experienceId: string) => apiFetch<any>(`/experiences/${experienceId}/title`, {
+  renameExperienceTitle: (experienceId: string) => apiFetch<{ experience: TransferEngagement }>(`/experiences/${experienceId}/title`, {
     method: 'POST',
   }),
-  deleteExperience: (experienceId: string) => apiFetch<any>(`/experiences/${experienceId}`, {
+  deleteExperience: (experienceId: string) => apiFetch<{ success: boolean }>(`/experiences/${experienceId}`, {
     method: 'DELETE',
   }),
-  updateReleaseDate: (date: string, experienceId?: string) => apiFetch<any>('/dashboard/release', {
+  updateReleaseDate: (date: string, experienceId?: string) => apiFetch<{ engagement: TransferEngagement }>('/dashboard/release', {
     method: 'POST',
     body: JSON.stringify({ release_date: date, engagement_id: experienceId }),
   }),
-  createOrgMember: (member: { full_name: string; email: string; password: string; role: string; job_title?: string; years_exp?: number }) => apiFetch<any>('/org/members', {
+  createOrgMember: (member: { full_name: string; email: string; password: string; role: string; job_title?: string; years_exp?: number }) => apiFetch<{ user: User }>('/org/members', {
     method: 'POST',
     body: JSON.stringify(member),
   }),
-  deleteOrgMember: (memberId: string) => apiFetch<any>(`/org/members/${memberId}`, {
+  deleteOrgMember: (memberId: string) => apiFetch<{ success: boolean }>(`/org/members/${memberId}`, {
     method: 'DELETE',
   }),
 };
 
 export const profileService = {
-  getProfile: (engagementId: string) => apiFetch<any>(`/profiles/${engagementId}`),
-  queryProfile: (engagementId: string, query: string) => apiFetch<any>(`/profiles/${engagementId}/query`, {
+  getProfile: (engagementId: string) => apiFetch<KnowledgeProfile[]>(`/profiles/${engagementId}`),
+  queryProfile: (engagementId: string, query: string) => apiFetch<KnowledgeProfile[]>(`/profiles/${engagementId}/query`, {
     method: 'POST',
     body: JSON.stringify({ query }),
   }),

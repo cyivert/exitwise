@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../config/constants';
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Processes');
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,7 +13,13 @@ export default function ProfilePage() {
   const sections = ['Processes', 'Decisions', 'Relationships', 'Edge Cases', 'Unwritten Rules', 'Advice'];
 
   // mock profile data
-  const mockCards: any[] = [
+  const mockCards: {
+    title: string;
+    content: string;
+    quote?: string;
+    type: 'explicit' | 'tacit' | 'relational' | 'emergency' | 'exception';
+    section: string;
+  }[] = [
     {
       title: 'Turbidity Reading Protocol',
       content: 'If reading is above 0.3 NTU after backwash, do not wait. Manual bypass to lagoon immediately or filter bed 4 will overflow.',

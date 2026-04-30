@@ -3,15 +3,16 @@ import { useAuthStore } from '../../store/authStore';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../config/constants';
 import { dashboardService, interviewService } from '../../services/api';
+import type { TransferEngagement, User, InterviewSession, Organization } from '../../types';
 
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const [data, setData] = useState<{ experiences?: any[]; activeExperience?: any; sessions?: any[]; engagement?: any; organization?: any; members?: any[] } | null>(null);
+  const [data, setData] = useState<{ experiences?: TransferEngagement[]; activeExperience?: TransferEngagement | null; sessions?: InterviewSession[]; engagement?: TransferEngagement | null; organization?: Organization | null; members?: User[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedExperienceId, setSelectedExperienceId] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [selectedSessions, setSelectedSessions] = useState<any[]>([]);
+  const [selectedSessions, setSelectedSessions] = useState<InterviewSession[]>([]);
   const [memberForm, setMemberForm] = useState({ full_name: '', email: '', password: '', role: 'retiree', job_title: '', years_exp: '' });
   const [adminTab, setAdminTab] = useState<'overview' | 'members' | 'experiences'>('overview');
 
@@ -98,7 +99,7 @@ export default function DashboardPage() {
     setIsBusy(true);
     const res = await dashboardService.deleteOrgMember(memberId);
     if (res.data) {
-      setData((prev) => prev ? { ...prev, members: (prev.members || []).filter((member: any) => member.id !== memberId) } : prev);
+      setData((prev) => prev ? { ...prev, members: (prev.members || []).filter((member: User) => member.id !== memberId) } : prev);
     }
     setIsBusy(false);
   };

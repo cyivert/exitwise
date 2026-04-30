@@ -1,11 +1,13 @@
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
-// /caveman: stream ai via backend proxy. hide keys.
 export async function* streamInterviewResponse(sessionId: string, userResponse: string) {
   const { token } = useAuthStore.getState();
 
-  const response = await fetch(`${env.VITE_API_URL}/interview/stream`, {
+  // Make sure VITE_API_URL is pointing to your Bun server (e.g., http://localhost:8080)
+  const apiUrl = env.VITE_API_URL || ''; 
+
+  const response = await fetch(`${apiUrl}/api/interview/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -14,7 +16,12 @@ export async function* streamInterviewResponse(sessionId: string, userResponse: 
     body: JSON.stringify({ sessionId, userResponse }),
   });
 
-  if (!response.ok) throw new Error('AI stream failed');
+  // 🔥 THIS IS THE FIX TO SEE THE REAL ERROR 🔥
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Backend crashed! Status: ${response.status}. Message: ${errorText}`);
+    throw new Error(`AI stream failed: ${response.status} - ${errorText}`);
+  }
 
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();

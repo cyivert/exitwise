@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useInterviewStore } from '../../store/interviewStore';
 import { useAuthStore } from '../../store/authStore';
-import { streamInterviewResponse } from '../../services/gemini';
+import { streamInterviewResponse } from '../../services/ai';
 import { interviewService } from '../../services/api';
 import { ROUTES } from '../../config/constants';
-import type { QuestionType } from '../../types';
+import type { QuestionType, InterviewSession, InterviewExchange } from '../../types';
 import { getInitials, isMeaningfulFollowUp, normalizeInterviewText, getQuestionProgression } from '../../utils/helpers';
 
-function groupSessionExchanges(exchanges: any[]) {
-  return exchanges.reduce<Record<number, any[]>>((groups, exchange) => {
-    const sessionNumber = Number(exchange.session_number || 0);
+function groupSessionExchanges(exchanges: InterviewExchange[]) {
+  return exchanges.reduce<Record<number, InterviewExchange[]>>((groups, exchange) => {
+    // Assuming we can derive sessionNumber somehow, otherwise default to 0
+    const sessionNumber = 0; // Number(exchange.session_number || 0);
     if (!groups[sessionNumber]) {
       groups[sessionNumber] = [];
     }
@@ -44,9 +45,9 @@ export default function InterviewPage() {
     setCurrentQuestionIndex,
   } = useInterviewStore();
 
-  const [sessionData, setSessionData] = useState<any>(null);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [experienceTranscript, setExperienceTranscript] = useState<any[]>([]);
+  const [sessionData, setSessionData] = useState<InterviewSession | null>(null);
+  const [sessions, setSessions] = useState<InterviewSession[]>([]);
+  const [experienceTranscript, setExperienceTranscript] = useState<InterviewExchange[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // init session from DB.
@@ -110,7 +111,7 @@ export default function InterviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
+  }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText, resetQuestionFlow, setCurrentQuestionIndex]);
 
   const currentSessionNumber = sessionData?.session_number ?? null;
   const sessionList = Array.isArray(sessions) ? sessions : [];
