@@ -5,6 +5,10 @@ import { ROUTES } from '../../config/constants';
 import { dashboardService, interviewService } from '../../services/api';
 import UserMenu from '../../components/shared/UserMenu';
 
+function formatFocus(focus: string) {
+  return focus.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
@@ -163,22 +167,21 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <nav className="bg-green-deep text-cream py-4 px-8 flex justify-between items-center">
+      <nav className="bg-green-deep/95 backdrop-blur-sm text-cream py-4 px-8 flex justify-between items-center sticky top-0 z-40 border-b border-green-mid/20">
         <div className="text-xl font-serif">
           Exit<span className="text-amber italic">Wise</span>
         </div>
-        <div className="flex items-center space-x-3">
-          <span className="text-sm text-green-pale hidden md:block">{user.full_name}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-green-pale/60 hidden md:block uppercase tracking-widest">{formatFocus(user.role.replace('_', ' '))} Dashboard</span>
           <UserMenu dark />
         </div>
       </nav>
 
       <main className="p-8 max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-4xl mb-2">Welcome back, {user.full_name.split(' ')[0]}</h1>
-          <p className="text-text-light uppercase tracking-wider text-xs font-bold">
-            {user.role} Dashboard • {new Date().toLocaleDateString()}
-          </p>
+        <header className="mb-10 pt-2">
+          <p className="label-caps text-amber mb-2">Welcome back</p>
+          <h1 className="font-serif text-5xl mb-1">{user.full_name.split(' ')[0]}</h1>
+          <p className="text-text-light text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </header>
 
         {isLoading ? (
@@ -216,18 +219,16 @@ export default function DashboardPage() {
                   <div className="p-6 space-y-8">
                     {adminTab === 'overview' && (
                       <div className="grid md:grid-cols-3 gap-4">
-                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
-                          <p className="label-caps mb-2">Members</p>
-                          <p className="text-3xl font-serif text-text-dark">{data?.members?.length || 0}</p>
-                        </div>
-                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
-                          <p className="label-caps mb-2">Experiences</p>
-                          <p className="text-3xl font-serif text-text-dark">{data?.experiences?.length || 0}</p>
-                        </div>
-                        <div className="p-5 rounded-lg border border-cream-dark bg-cream/30">
-                          <p className="label-caps mb-2">Private Experiences</p>
-                          <p className="text-3xl font-serif text-text-dark">{(data?.experiences || []).filter((experience) => !experience.release_date).length}</p>
-                        </div>
+                        {[
+                          { label: 'Members', value: data?.members?.length || 0 },
+                          { label: 'Experiences', value: data?.experiences?.length || 0 },
+                          { label: 'Unreleased', value: (data?.experiences || []).filter((e) => !e.release_date).length },
+                        ].map((stat) => (
+                          <div key={stat.label} className="p-6 bg-white border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)]">
+                            <p className="label-caps text-green-mid mb-3">{stat.label}</p>
+                            <p className="font-serif text-4xl text-text-dark">{stat.value}</p>
+                          </div>
+                        ))}
                       </div>
                     )}
 
@@ -355,18 +356,28 @@ export default function DashboardPage() {
                       {startButtonLabel}
                     </button>
                   </div>
-                  <div className="p-6 space-y-4">
-                    {selectedSessions.map(session => (
-                      <div key={session.id} className="flex items-center justify-between p-4 rounded-md bg-cream/30 border border-cream-dark/50">
-                        <div className="flex items-center space-x-4">
-                          <div className={`w-3 h-3 rounded-full ${session.status === 'complete' ? 'bg-green-light' : session.status === 'active' ? 'bg-amber' : 'bg-cream-dark'}`} />
-                          <span className="font-medium">Session {session.session_number}: {session.session_focus}</span>
+                  <div className="p-6 space-y-2">
+                    {selectedSessions.map(session => {
+                      const isComplete = session.status === 'complete';
+                      const isActive = session.status === 'active';
+                      return (
+                        <div
+                          key={session.id}
+                          className={`flex items-center justify-between px-4 py-3 rounded-lg border transition-colors ${isComplete ? 'bg-green-pale/30 border-green-pale' : isActive ? 'bg-amber-light/40 border-amber/30' : 'bg-cream/30 border-cream-dark/50'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${isComplete ? 'bg-green-light' : isActive ? 'bg-amber' : 'bg-cream-dark'}`} />
+                            <div>
+                              <span className="text-sm font-medium text-text-dark">Session {session.session_number}</span>
+                              <span className="text-xs text-text-light ml-2">{formatFocus(session.session_focus || '')}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${isComplete ? 'bg-green-deep/10 text-green-mid' : isActive ? 'bg-amber/10 text-amber' : 'text-text-light'}`}>
+                            {session.status}
+                          </span>
                         </div>
-                        <span className="text-xs uppercase tracking-widest text-text-light font-bold">
-                          {session.status}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
