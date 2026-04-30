@@ -370,12 +370,13 @@ async function generateAnthropicStream(prompt: string | string[]) {
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No stream from Anthropic');
+      const safeReader = reader;
 
       async function* sseGenerator() {
         const decoder = new TextDecoder();
         let buffer = '';
         while (true) {
-          const { done, value } = await reader.read();
+          const { done, value } = await safeReader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           let idx;
@@ -441,7 +442,7 @@ async function generateAnthropicText(prompt: string | string[]) {
     throw new Error(`Anthropic error ${res.status}: ${txt}`);
   }
 
-  const json = await res.json();
+  const json = await res.json() as any;
   const text = json?.content?.[0]?.text ?? null;
   return typeof text === 'string' ? text : JSON.stringify(json);
 }
