@@ -258,7 +258,7 @@ export default function DashboardPage() {
                               </div>
                               <button
                                 onClick={() => handleDeleteMember(member.id)}
-                                className="text-xs px-3 py-2 rounded border border-red-200 text-red-700 hover:bg-red-50"
+                                className="btn-danger text-xs"
                                 disabled={isBusy || member.id === user.id}
                               >
                                 Delete
@@ -318,20 +318,20 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleRenameExperienceTitle(experience.id)}
-                              className="text-xs px-3 py-2 rounded border border-amber/30 text-amber hover:bg-amber-light"
+                              className="btn-secondary text-xs"
                               disabled={isBusy}
                             >
                               Rename with AI
                             </button>
                             <button
                               onClick={() => setSelectedExperienceId(experience.id)}
-                              className="text-xs px-3 py-2 rounded border border-cream-dark text-text-mid hover:text-text-dark"
+                              className="btn-secondary text-xs"
                             >
                               Select
                             </button>
                             <button
                               onClick={() => handleDeleteExperience(experience.id)}
-                              className="text-xs px-3 py-2 rounded border border-red-200 text-red-700 hover:bg-red-50"
+                              className="btn-danger text-xs"
                               disabled={isBusy || (data?.experiences || []).length === 1}
                             >
                               Delete
@@ -394,7 +394,7 @@ export default function DashboardPage() {
                       Successor granted access on {new Date(selectedExperience.release_date).toLocaleDateString()}.
                     </div>
                   ) : (
-                    <button onClick={handleRelease} className="btn-primary bg-amber border-amber">Release Knowledge Profile to Successor</button>
+                    <button onClick={handleRelease} className="btn-primary">Release Knowledge Profile to Successor</button>
                   )}
                 </div>
               </div>

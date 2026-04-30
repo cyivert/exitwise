@@ -237,7 +237,7 @@ export default function KnowledgeChatPage() {
                     <button
                       onClick={handleNewChat}
                       disabled={isStreaming}
-                      className="text-xs px-3 py-1.5 rounded-full border border-amber text-amber hover:bg-amber-light transition-colors disabled:opacity-50"
+                      className="btn-secondary text-xs"
                     >
                       Start New Chat
                     </button>
@@ -245,7 +245,7 @@ export default function KnowledgeChatPage() {
                     <button
                       onClick={handleConfirm}
                       disabled={isStreaming || messages.length === 0}
-                      className="text-xs px-3 py-1.5 rounded-full border border-cream-dark text-text-mid hover:bg-cream transition-colors disabled:opacity-40"
+                      className="btn-secondary text-xs"
                     >
                       End Chat
                     </button>
@@ -341,7 +341,7 @@ export default function KnowledgeChatPage() {
                     <button
                       onClick={handleSend}
                       disabled={!input.trim() || isStreaming}
-                      className="w-9 h-9 rounded-full bg-amber flex items-center justify-center text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shrink-0"
+                      className="w-9 h-9 bg-amber border-2 border-green-deep flex items-center justify-center text-green-deep shadow-[2px_2px_0px_0px_rgba(26,58,42,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-40 disabled:pointer-events-none shrink-0"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>

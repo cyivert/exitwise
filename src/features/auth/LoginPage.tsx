@@ -99,7 +99,7 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              className={`w-full btn-primary py-3 text-base mt-2 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className="w-full btn-primary py-3 text-base mt-2"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in…' : 'Sign in'}

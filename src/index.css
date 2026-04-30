@@ -112,17 +112,22 @@
 }
 
 @layer components {
-  /* /caveman: primary amber cta */
   .btn-primary {
-    @apply bg-amber text-green-deep px-6 py-2 rounded-lg font-medium shadow-sm border border-transparent transition-all duration-200 ease-out hover:bg-[#b07620] hover:text-white hover:shadow-md active:translate-y-px;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-none font-bold bg-amber text-green-deep border-2 border-green-deep shadow-[4px_4px_0px_0px_rgba(26,58,42,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:pointer-events-none disabled:opacity-50 px-6 py-2;
   }
 
-  /* /caveman: ghost navbar button */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-none font-bold bg-cream text-text-dark border-2 border-green-deep shadow-[2px_2px_0px_0px_rgba(26,58,42,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:pointer-events-none disabled:opacity-50 px-3 py-1.5 text-sm;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-none font-bold bg-cream text-red-danger border-2 border-red-danger transition-all hover:bg-red-light disabled:pointer-events-none disabled:opacity-50 px-3 py-1.5 text-sm;
+  }
+
   .btn-ghost {
-    @apply border border-[rgba(247,243,236,0.45)] text-cream px-4 py-2 rounded-lg transition-all duration-200 ease-out hover:bg-white/10 hover:border-[rgba(247,243,236,0.7)] hover:shadow-sm active:translate-y-px;
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-none font-bold border-2 border-[rgba(247,243,236,0.5)] text-cream px-4 py-2 transition-all hover:bg-white/10 hover:border-cream/70 disabled:pointer-events-none disabled:opacity-50;
   }
 
-  /* /caveman: small caps section label */
   .label-caps {
     @apply text-[10px] uppercase tracking-[0.1em] text-text-light font-bold;
   }
