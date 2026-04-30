@@ -5,6 +5,7 @@ import { successorChatService } from '../../services/api';
 import { streamSuccessorQuery } from '../../services/gemini';
 import { ROUTES } from '../../config/constants';
 import type { SuccessorChat, SuccessorChatMessage } from '../../types';
+import UserMenu from '../../components/shared/UserMenu';
 
 export default function KnowledgeChatPage() {
   const { engagementId } = useParams<{ engagementId: string }>();
@@ -140,6 +141,7 @@ export default function KnowledgeChatPage() {
               Confirm & End Session
             </button>
           )}
+          <UserMenu dark />
         </div>
       </header>
 
