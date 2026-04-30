@@ -8,14 +8,15 @@ import { loginSchema, signupSchema } from "./src/schemas/auth";
 // Railway/Bun entry point. dynamic port + security.
 const port = process.env.PORT || 8080;
 const DIST_PATH = join(process.cwd(), "dist");
-const JWT_SECRET = process.env.JWT_SECRET;
+const jwtSecret = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL || "";
 
-if (!JWT_SECRET) {
+if (!jwtSecret) {
   throw new Error("JWT_SECRET is required");
 }
 
+const JWT_SECRET: string = jwtSecret;
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const useDemoApi = DATABASE_URL.includes(".railway.internal") && !process.env.RAILWAY_ENVIRONMENT;
 
@@ -29,6 +30,47 @@ type DemoUser = {
   job_title?: string | null;
   years_exp?: number | null;
   created_at: string;
+};
+
+type ExchangePayload = {
+  id: string;
+  session_id: string;
+  question_text: string;
+  question_type: string;
+  response_text?: string | null;
+  ai_follow_up?: string | null;
+  sequence_order?: number;
+};
+
+type OrgMemberPayload = {
+  full_name: string;
+  email: string;
+  password: string;
+  role: string;
+  job_title?: string | null;
+  years_exp?: number | null;
+};
+
+type ReleaseDatePayload = {
+  release_date: string;
+  engagement_id?: string;
+};
+
+type InterviewStreamPayload = {
+  sessionId: string;
+  userResponse: string;
+};
+
+type SuccessorChatMessagePayload = {
+  chat_id: string;
+  role: string;
+  content: string;
+};
+
+type SuccessorStreamPayload = {
+  chatId: string;
+  engagementId: string;
+  message: string;
 };
 
 const demoOrg = {
@@ -51,8 +93,16 @@ function safeJson(data: unknown, headers: Headers, init: ResponseInit = {}) {
 }
 
 function toSafeUser(user: DemoUser) {
-  const { password_hash, ...safeUser } = user;
-  return safeUser;
+  return {
+    id: user.id,
+    org_id: user.org_id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    job_title: user.job_title,
+    years_exp: user.years_exp,
+    created_at: user.created_at,
+  };
 }
 
 function makeDemoExperience(user: DemoUser) {
@@ -183,7 +233,7 @@ async function handleDemoApi(req: Request, url: URL, headers: Headers) {
   }
 
   if (url.pathname === "/api/exchanges" && req.method === "POST") {
-    const body = await req.json();
+    const body = await req.json() as ExchangePayload;
     const current = demoExchanges.get(body.session_id) || [];
     const exchange = { ...body, created_at: new Date().toISOString() };
     demoExchanges.set(body.session_id, [...current.filter((item) => item.id !== body.id), exchange]);
@@ -229,7 +279,7 @@ function checkRateLimit(key: string) {
 function verifyToken(authHeader: string | null) {
   if (!authHeader?.startsWith("Bearer ")) return null;
   try {
-    return jwt.verify(authHeader.split(" ")[1], JWT_SECRET) as { sub: string, role: string };
+    return jwt.verify(authHeader.split(" ")[1], JWT_SECRET) as unknown as { sub: string, role: string };
   } catch {
     return null;
   }
@@ -329,7 +379,15 @@ async function getOrganizationAdminContext(userId: string) {
   return { organization, members, experiences };
 }
 
-function buildFallbackExperienceTitle(experience: { retiree_name?: string; job_title?: string | null; org_name?: string }, exchanges: Array<{ question_text: string; response_text?: string | null; ai_follow_up?: string | null }>) {
+type ExperienceTitleExchange = {
+  session_number: number;
+  session_focus: string;
+  question_text: string;
+  response_text?: string | null;
+  ai_follow_up?: string | null;
+};
+
+function buildFallbackExperienceTitle(experience: { retiree_name?: string; job_title?: string | null; org_name?: string }, exchanges: ExperienceTitleExchange[]) {
   const sourceText = [...exchanges]
     .reverse()
     .map((exchange) => normalizeContextText(exchange.response_text || exchange.ai_follow_up || exchange.question_text))
@@ -363,7 +421,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
     throw new Error('Experience not found');
   }
 
-  const exchanges = await sql`
+  const exchanges = await sql<ExperienceTitleExchange[]>`
     SELECT s.session_number, s.session_focus, x.question_text, x.response_text, x.ai_follow_up, x.created_at
     FROM interview_sessions s
     JOIN interview_exchanges x ON x.session_id = s.id
@@ -402,7 +460,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
       const generatedText = result.response.text().trim();
       cleanedTitle = normalizeContextText(generatedText)
         .replace(/^title:\s*/i, '')
-        .replace(/^['\"`]|['\"`]$/g, '')
+        .replace(/^['"`]|['"`]$/g, '')
         .replace(/[.]+$/g, '')
         .trim();
     }
@@ -426,7 +484,7 @@ async function generateExperienceTitle(engagementId: string, retireeId: string) 
 
 Bun.serve({
   port: port,
-  async fetch(req) {
+  async fetch(req: Request) {
     const url = new URL(req.url);
     
     // security headers.
@@ -456,7 +514,8 @@ Bun.serve({
         try {
           const body = await req.json();
           const validated = signupSchema.parse(body);
-          let { email, password, full_name, role, org_name, invite_code } = validated;
+          const { email, password, full_name, org_name, invite_code } = validated;
+          let { role } = validated;
 
           const ip = req.headers.get("x-forwarded-for") || "unknown";
           if (checkRateLimit(`signup:${ip}`)) {
@@ -525,7 +584,8 @@ Bun.serve({
             }
           }
 
-          const { password_hash, ...userSafe } = user;
+          const userSafe = { ...user };
+          delete (userSafe as typeof user & { password_hash?: string }).password_hash;
           const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
           return new Response(JSON.stringify({ user: userSafe, token }), { headers: apiHeaders });
         } catch (e: any) {
@@ -594,7 +654,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const body = await req.json();
+          const body = await req.json() as OrgMemberPayload;
           const { full_name, email, password, role, job_title, years_exp } = body;
           const [adminUser] = await sql`SELECT id, org_id FROM users WHERE id = ${decoded.sub}` as Array<{ id: string; org_id: string }>;
           if (!adminUser) return new Response(JSON.stringify({ message: "Organization admin not found" }), { status: 404, headers: apiHeaders });
@@ -759,7 +819,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { release_date, engagement_id } = await req.json();
+          const { release_date, engagement_id } = await req.json() as ReleaseDatePayload;
           if (engagement_id) {
             await sql`UPDATE transfer_engagements SET release_date = ${release_date} WHERE id = ${engagement_id} AND retiree_id = ${decoded.sub}`;
           } else {
@@ -832,7 +892,7 @@ Bun.serve({
         apiHeaders.set("Content-Type", "application/json");
 
         try {
-          const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json();
+          const { id, session_id, question_text, question_type, response_text, ai_follow_up, sequence_order } = await req.json() as ExchangePayload;
           const [session] = await sql`
             SELECT s.id, s.session_number, s.session_focus, s.running_summary, e.id AS engagement_id, e.org_id, e.retiree_id, e.transcript
             FROM interview_sessions s
@@ -856,7 +916,7 @@ Bun.serve({
 
           await sql`
             INSERT INTO interview_exchanges (id, session_id, org_id, retiree_id, question_text, question_type, response_text, ai_follow_up, sequence_order)
-            VALUES (${id}, ${session_id}, ${session.org_id}, ${session.retiree_id}, ${question_text}, ${question_type}, ${response_text}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
+            VALUES (${id}, ${session_id}, ${session.org_id}, ${session.retiree_id}, ${question_text}, ${question_type}, ${response_text ?? null}, ${ai_follow_up ?? null}, ${sequence_order ?? 0})
             ON CONFLICT (id) DO UPDATE SET
               session_id = EXCLUDED.session_id,
               org_id = EXCLUDED.org_id,
@@ -927,7 +987,7 @@ Bun.serve({
         if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
-          const { sessionId, userResponse } = await req.json();
+          const { sessionId, userResponse } = await req.json() as InterviewStreamPayload;
           
           // fetch context from DB.
           const [session] = await sql`
@@ -1054,7 +1114,7 @@ Bun.serve({
         if (!decoded || decoded.role !== 'successor') return new Response("Unauthorized", { status: 401 });
 
         try {
-          const { chat_id, role, content } = await req.json();
+          const { chat_id, role, content } = await req.json() as SuccessorChatMessagePayload;
           const [chat] = await sql`
             SELECT * FROM successor_chats
             WHERE id = ${chat_id} AND successor_id = ${decoded.sub} AND status = 'active'
@@ -1140,7 +1200,7 @@ Bun.serve({
         if (!genAI) return new Response("AI configuration missing", { status: 500 });
 
         try {
-          const { chatId, engagementId, message } = await req.json();
+          const { chatId, engagementId, message } = await req.json() as SuccessorStreamPayload;
 
           if (typeof chatId !== 'string' || typeof engagementId !== 'string' || typeof message !== 'string') {
             return new Response(JSON.stringify({ message: 'Invalid payload' }), { status: 400, headers: apiHeaders });

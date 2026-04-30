@@ -111,7 +111,7 @@ export default function InterviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, setCurrentQuestion, setDraftResponse, setSession, setStreamingText]);
+  }, [sessionId, setCurrentQuestion, setCurrentQuestionIndex, resetQuestionFlow, setDraftResponse, setSession, setStreamingText]);
 
   const currentSessionNumber = sessionData?.session_number ?? null;
   const sessionList = Array.isArray(sessions) ? sessions : [];
