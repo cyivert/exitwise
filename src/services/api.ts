@@ -2,7 +2,7 @@ import type { ApiResponse, LoginCredentials, SignupData, User } from '../types';
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
-// /caveman: typed fetch wrapper. ensure /api prefix.
+// typed fetch wrapper. ensure /api prefix.
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -15,7 +15,7 @@ async function apiFetch<T>(
   }
   headers.set('Content-Type', 'application/json');
 
-  // /caveman: enforce /api prefix if missing.
+  // enforce /api prefix if missing.
   const path = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`;
 
   try {
@@ -36,6 +36,7 @@ async function apiFetch<T>(
   }
 }
 
+// API service functions
 export const authService = {
   login: (credentials: LoginCredentials) => apiFetch<{ user: User; token: string }>('/auth/login', {
     method: 'POST',
@@ -47,6 +48,7 @@ export const authService = {
   }),
 };
 
+// This file can be expanded with more services as needed, e.g., userService, orgService, etc.
 export const interviewService = {
   getSessions: (engagementId: string) => apiFetch<any[]>(`/sessions?engagement_id=${engagementId}`),
   getSession: (sessionId: string) => apiFetch<any>(`/sessions/${sessionId}`),
@@ -59,6 +61,7 @@ export const interviewService = {
   }),
 };
 
+// Dashboard related API calls CRUD operations for experiences, org members, release date, etc.
 export const dashboardService = {
   getDashboard: () => apiFetch<{ experiences?: any[]; activeExperience?: any; sessions?: any[]; organization?: any; members?: any[]; engagement?: any }>('/dashboard'),
   createExperience: () => apiFetch<any>('/experiences', {
@@ -83,6 +86,7 @@ export const dashboardService = {
   }),
 };
 
+// Successor chat related API calls
 export const successorChatService = {
   getRetirees: () => apiFetch<any[]>('/successor/retirees'),
   getOrCreateChat: (engagementId: string) => apiFetch<any>(`/successor/chat/${engagementId}`),
@@ -94,6 +98,7 @@ export const successorChatService = {
     apiFetch<any>(`/successor/chat/${chatId}/reset`, { method: 'POST' }),
 };
 
+// Profile related API calls
 export const profileService = {
   getProfile: (engagementId: string) => apiFetch<any>(`/profiles/${engagementId}`),
   queryProfile: (engagementId: string, query: string) => apiFetch<any>(`/profiles/${engagementId}/query`, {

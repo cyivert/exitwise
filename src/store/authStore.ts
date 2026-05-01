@@ -7,6 +7,7 @@ interface AuthActions {
   clearAuth: () => void;
 }
 
+// Zustand store for authentication state management
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
     (set) => ({

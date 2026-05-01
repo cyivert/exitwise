@@ -1,7 +1,9 @@
 import { env } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
-// /caveman: stream ai via backend proxy. hide keys.
+// stream ai via backend proxy. hide keys.
+// This is used for both interview response streaming and successor chat streaming, 
+// which is why it's in the shared gemini service file.
 export async function* streamInterviewResponse(sessionId: string, userResponse: string) {
   const { token } = useAuthStore.getState();
 
@@ -22,7 +24,7 @@ export async function* streamInterviewResponse(sessionId: string, userResponse: 
         errorMessage = payload.message;
       }
     } catch {
-      // ignore json parse errors and use fallback message.
+      // add event hanlde later...
     }
     throw new Error(errorMessage);
   }
@@ -30,6 +32,7 @@ export async function* streamInterviewResponse(sessionId: string, userResponse: 
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
 
+  // check reader exists before entering loop. if no reader, just exit generator.
   if (!reader) return;
 
   while (true) {
@@ -39,6 +42,7 @@ export async function* streamInterviewResponse(sessionId: string, userResponse: 
   }
 }
 
+// Similar streaming function for successor chat, which has same streaming backend but different endpoint and request payload.
 export async function* streamSuccessorQuery(chatId: string, engagementId: string, message: string) {
   const { token } = useAuthStore.getState();
 
@@ -59,7 +63,7 @@ export async function* streamSuccessorQuery(chatId: string, engagementId: string
         errorMessage = payload.message;
       }
     } catch {
-      // ignore json parse errors and use fallback message.
+      // add event handler later...
     }
     throw new Error(errorMessage);
   }
@@ -67,6 +71,7 @@ export async function* streamSuccessorQuery(chatId: string, engagementId: string
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
 
+  // check reader exists before entering loop. if no reader, just exit generator.
   if (!reader) return;
 
   while (true) {
